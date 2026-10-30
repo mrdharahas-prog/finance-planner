@@ -94,20 +94,21 @@ export default function App() {
   };
 
   // Color Palette Definitions (Spotify Dark / Clean Contrast Light)
-  const isDark = theme === "dark";
-  const colors = {
-    bg: isDark ? "#121212" : "#f4f4f6",
+ const isDark = theme === "dark";
+ const colors = {
+    bg: isDark ? "#121212" : "#f5f7fb",
     surface: isDark ? "#181818" : "#ffffff",
-    surfaceHover: isDark ? "#282828" : "#f0f0f2",
-    inputBg: isDark ? "#242424" : "#e9e9ed",
-    border: isDark ? "#2a2a2a" : "#dcdce0",
-    textPrimary: isDark ? "#ffffff" : "#121212",
-    textSecondary: isDark ? "#b3b3b3" : "#6a6a75",
-    accent: "#1ed760", // Spotify Green
-    accentHover: "#1fdf64",
+    surfaceHover: isDark ? "#282828" : "#eef2f8",
+    inputBg: isDark ? "#242424" : "#edf2f9",
+    border: isDark ? "#2a2a2a" : "#dbe3ef",
+    textPrimary: isDark ? "#ffffff" : "#1e293b",
+    textSecondary: isDark ? "#b3b3b3" : "#64748b",
+    accent: isDark ? "#1ed760" : "#3b82f6",
+    accentText: isDark ? "#000000" : "#ffffff",
+    accentHover: isDark ? "#1fdf64" : "#2563eb",
     danger: "#f15e6c",
-    blue: "#3d91f4",
-    gold: "#e6b439"
+    blue: "#3b82f6",
+    gold: "#d97706",
   };
 
   // Financial aggregates
