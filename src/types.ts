@@ -4,19 +4,21 @@ export interface SavingsGoal {
   priceMultiplier: number;
   monthlySavings: number;
   savingsRatePercentage: number;
-  monthsToGoal: number;
-}
-
-export interface InflationProjection {
-  currentPrice: number;
-  annualRate: number;
-  months: number;
-  futurePrice: number;
-  adjustedMonthlySavingsNeeded: number;
+  staticMonthsToGoal: number;
+  realMonthsToGoal: number;
+  realFuturePrice: number;
+  totalSavedAtGoal: number;
 }
 
 export interface ExpenseItem {
   id: string;
   category: string;
   amount: number;
+}
+
+export interface FeasibilityReport {
+  totalExpenses: number;
+  disposableIncome: number;
+  maxFeasibleSavingsRate: number;
+  isFeasible: boolean;
 }
