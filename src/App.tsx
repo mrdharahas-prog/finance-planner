@@ -58,12 +58,10 @@ export default function App() {
     safeLoad(STORAGE_EXPENSES, DEFAULT_EXPENSES, (d) => Array.isArray(d))
   );
 
-  // Transaction Inputs
   const [txGoalId, setTxGoalId] = useState<string>(() => goals[0]?.id || "");
   const [txAmount, setTxAmount] = useState<string>("");
   const [txType, setTxType] = useState<"deposit" | "withdraw">("deposit");
 
-  // Expense Inputs
   const [expenseCategory, setExpenseCategory] = useState("");
   const [expenseAmount, setExpenseAmount] = useState("");
 
@@ -71,7 +69,6 @@ export default function App() {
   const toastTimerRef = useRef<number | null>(null);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
 
-  // Sync state
   useEffect(() => safeSave(STORAGE_THEME, theme), [theme]);
   useEffect(() => safeSave(STORAGE_GOALS, goals), [goals]);
   useEffect(() => safeSave(STORAGE_LOGS, transactions), [transactions]);
@@ -93,9 +90,8 @@ export default function App() {
     }, 4500);
   };
 
-  // Color Palette Definitions (Spotify Dark / Clean Contrast Light)
- const isDark = theme === "dark";
- const colors = {
+  const isDark = theme === "dark";
+  const colors = {
     bg: isDark ? "#121212" : "#f5f7fb",
     surface: isDark ? "#181818" : "#ffffff",
     surfaceHover: isDark ? "#282828" : "#eef2f8",
@@ -111,7 +107,6 @@ export default function App() {
     gold: "#d97706",
   };
 
-  // Financial aggregates
   const totalExpenses = expenses.reduce((sum, e) => sum + e.amount, 0);
   const disposableIncome = Math.max(0, monthlySalary - totalExpenses);
 
@@ -262,12 +257,12 @@ export default function App() {
       minHeight: "100vh",
       backgroundColor: colors.bg,
       color: colors.textPrimary,
-      fontFamily: "'Circular', -apple-system, BlinkMacSystemFont, Roboto, sans-serif",
+      fontFamily: "'Inter', sans-serif",
       padding: "2.5rem 1rem",
       display: "flex",
       justifyContent: "center",
-      transition: "background-color 0.25s ease, color 0.25s ease"
-    }}>
+      transition: "background-color 0.3s, color 0.3s",
+      }}>
       <div style={{ maxWidth: "880px", width: "100%" }}>
         
         {/* Top App Bar */}
@@ -276,17 +271,20 @@ export default function App() {
             <div>
               <div style={{ display: "flex", alignItems: "center", gap: "0.6rem" }}>
                 <span style={{ fontSize: "1.8rem" }}>💸</span>
-                <h1 style={{ fontSize: "1.75rem", fontWeight: 800, margin: 0, letterSpacing: "-0.03em" }}>
+                {/* Finance Planner title -> Manrope 800 */}
+                <h1 style={{ fontFamily: "'Manrope', sans-serif", fontSize: "1.75rem", fontWeight: 800, margin: 0, letterSpacing: "-0.03em" }}>
                   Finance Planner
                 </h1>
               </div>
-              <p style={{ color: colors.textSecondary, fontSize: "0.9rem", margin: "0.3rem 0 0" }}>
+              {/* Descriptions and helper text -> Inter 400 */}
+              <p style={{ fontFamily: "'Inter', sans-serif", color: colors.textSecondary, fontSize: "0.9rem", fontWeight: 400, margin: "0.3rem 0 0" }}>
                 Multi-goal tracking with true compounding and disposable budget checks.
               </p>
             </div>
 
             {/* Actions & Theme Switch */}
             <div style={{ display: "flex", alignItems: "center", gap: "0.6rem" }}>
+              {/* Buttons and form labels -> Inter 600 */}
               <button
                 type="button"
                 onClick={() => setTheme(isDark ? "light" : "dark")}
@@ -295,6 +293,7 @@ export default function App() {
                   backgroundColor: colors.surface,
                   border: `1px solid ${colors.border}`,
                   color: colors.textPrimary,
+                  fontFamily: "'Inter', sans-serif",
                   borderRadius: "500px",
                   padding: "0.45rem 1rem",
                   fontSize: "0.85rem",
@@ -315,6 +314,7 @@ export default function App() {
                   backgroundColor: colors.surface,
                   border: `1px solid ${colors.border}`,
                   color: colors.textPrimary,
+                  fontFamily: "'Inter', sans-serif",
                   borderRadius: "500px",
                   padding: "0.45rem 0.9rem",
                   fontSize: "0.85rem",
@@ -332,6 +332,7 @@ export default function App() {
                   backgroundColor: colors.surface,
                   border: `1px solid ${colors.border}`,
                   color: colors.textPrimary,
+                  fontFamily: "'Inter', sans-serif",
                   borderRadius: "500px",
                   padding: "0.45rem 0.9rem",
                   fontSize: "0.85rem",
@@ -345,7 +346,7 @@ export default function App() {
             </div>
           </div>
 
-          {/* Spotify-style Stats Dashboard Cards */}
+          {/* Stats Dashboard Cards */}
           <div style={{
             display: "grid",
             gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))",
@@ -358,11 +359,13 @@ export default function App() {
               borderRadius: "10px",
               boxShadow: isDark ? "0 4px 12px rgba(0,0,0,0.5)" : "0 4px 12px rgba(0,0,0,0.06)"
             }}>
-              <label htmlFor="salaryInput" style={{ fontSize: "0.8rem", color: colors.textSecondary, textTransform: "uppercase", letterSpacing: "0.05em", fontWeight: 700 }}>
+              {/* Form labels -> Inter 600 */}
+              <label htmlFor="salaryInput" style={{ fontFamily: "'Inter', sans-serif", fontSize: "0.8rem", color: colors.textSecondary, textTransform: "uppercase", letterSpacing: "0.05em", fontWeight: 600 }}>
                 Monthly Salary
               </label>
               <div style={{ display: "flex", alignItems: "center", gap: "0.4rem", marginTop: "0.4rem" }}>
-                <span style={{ fontSize: "1.2rem", fontWeight: 700, color: colors.accent }}>₹</span>
+                {/* Salary and currency figures -> Inter 700 */}
+                <span style={{ fontFamily: "'Inter', sans-serif", fontSize: "1.2rem", fontWeight: 700, color: colors.accent }}>₹</span>
                 <input
                   id="salaryInput"
                   type="number"
@@ -372,6 +375,7 @@ export default function App() {
                     backgroundColor: colors.inputBg,
                     border: "none",
                     color: colors.textPrimary,
+                    fontFamily: "'Inter', sans-serif",
                     fontSize: "1.25rem",
                     fontWeight: 700,
                     padding: "0.4rem 0.6rem",
@@ -388,14 +392,17 @@ export default function App() {
               borderRadius: "10px",
               boxShadow: isDark ? "0 4px 12px rgba(0,0,0,0.5)" : "0 4px 12px rgba(0,0,0,0.06)"
             }}>
-              <div style={{ fontSize: "0.8rem", color: colors.textSecondary, textTransform: "uppercase", letterSpacing: "0.05em", fontWeight: 700 }}>
+              {/* Card headings -> Manrope 700 */}
+              <div style={{ fontFamily: "'Manrope', sans-serif", fontSize: "0.85rem", color: colors.textSecondary, textTransform: "uppercase", letterSpacing: "0.05em", fontWeight: 700 }}>
                 Living Expenses
               </div>
-              <div style={{ fontSize: "1.4rem", fontWeight: 800, marginTop: "0.4rem" }}>
+              {/* Currency figures -> Inter 700 */}
+              <div style={{ fontFamily: "'Inter', sans-serif", fontSize: "1.4rem", fontWeight: 700, marginTop: "0.4rem" }}>
                 ₹{totalExpenses.toLocaleString()} <span style={{ fontSize: "0.8rem", color: colors.textSecondary, fontWeight: 400 }}>/ mo</span>
               </div>
-              <div style={{ fontSize: "0.75rem", color: colors.textSecondary, marginTop: "0.2rem" }}>
-                Disposable: <strong style={{ color: colors.textPrimary }}>₹{disposableIncome.toLocaleString()}</strong>
+              {/* Helper text -> Inter 400 */}
+              <div style={{ fontFamily: "'Inter', sans-serif", fontSize: "0.75rem", fontWeight: 400, color: colors.textSecondary, marginTop: "0.2rem" }}>
+                Disposable: <strong style={{ color: colors.textPrimary, fontWeight: 700 }}>₹{disposableIncome.toLocaleString()}</strong>
               </div>
             </div>
 
@@ -405,13 +412,16 @@ export default function App() {
               borderRadius: "10px",
               boxShadow: isDark ? "0 4px 12px rgba(0,0,0,0.5)" : "0 4px 12px rgba(0,0,0,0.06)"
             }}>
-              <div style={{ fontSize: "0.8rem", color: colors.textSecondary, textTransform: "uppercase", letterSpacing: "0.05em", fontWeight: 700 }}>
+              {/* Card headings -> Manrope 700 */}
+              <div style={{ fontFamily: "'Manrope', sans-serif", fontSize: "0.85rem", color: colors.textSecondary, textTransform: "uppercase", letterSpacing: "0.05em", fontWeight: 700 }}>
                 Committed to Goals
               </div>
-              <div style={{ fontSize: "1.4rem", fontWeight: 800, color: remainingAfterCommitments < 0 ? colors.danger : colors.accent, marginTop: "0.4rem" }}>
+              {/* Currency figures -> Inter 700 */}
+              <div style={{ fontFamily: "'Inter', sans-serif", fontSize: "1.4rem", fontWeight: 700, color: remainingAfterCommitments < 0 ? colors.danger : colors.accent, marginTop: "0.4rem" }}>
                 ₹{totalMonthlyCommitted.toLocaleString()} <span style={{ fontSize: "0.8rem", color: colors.textSecondary, fontWeight: 400 }}>/ mo</span>
               </div>
-              <div style={{ fontSize: "0.75rem", color: remainingAfterCommitments < 0 ? colors.danger : colors.textSecondary, marginTop: "0.2rem" }}>
+              {/* Helper text -> Inter 400 */}
+              <div style={{ fontFamily: "'Inter', sans-serif", fontSize: "0.75rem", fontWeight: 400, color: remainingAfterCommitments < 0 ? colors.danger : colors.textSecondary, marginTop: "0.2rem" }}>
                 {remainingAfterCommitments < 0 ? "⚠ Exceeds disposable balance!" : `₹${remainingAfterCommitments.toLocaleString()} buffer unallocated`}
               </div>
             </div>
@@ -428,24 +438,27 @@ export default function App() {
         }}>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "1rem", flexWrap: "wrap", gap: "0.8rem" }}>
             <div>
-              <h2 style={{ fontSize: "1.1rem", fontWeight: 700, margin: 0 }}>Piggy Bank Transactions</h2>
-              <p style={{ fontSize: "0.8rem", color: colors.textSecondary, margin: "0.2rem 0 0" }}>Update your tangible savings progress.</p>
+              {/* Card headings -> Manrope 700 */}
+              <h2 style={{ fontFamily: "'Manrope', sans-serif", fontSize: "1.1rem", fontWeight: 700, margin: 0 }}>Piggy Bank Transactions</h2>
+              {/* Helper text -> Inter 400 */}
+              <p style={{ fontFamily: "'Inter', sans-serif", fontSize: "0.8rem", fontWeight: 400, color: colors.textSecondary, margin: "0.2rem 0 0" }}>Update your tangible savings progress.</p>
             </div>
 
-            {/* Pill Toggle Button */}
+            {/* Pill Toggle Button: Buttons -> Inter 600 */}
             <div style={{ display: "flex", backgroundColor: colors.inputBg, padding: "3px", borderRadius: "500px" }}>
               <button
                 type="button"
                 onClick={() => setTxType("deposit")}
                 style={{
                   background: txType === "deposit" ? colors.accent : "transparent",
-                  color: txType === "deposit" ? "#000000" : colors.textSecondary,
+                  color: txType === "deposit" ? colors.accentText : colors.textSecondary,
                   border: "none",
+                  fontFamily: "'Inter', sans-serif",
                   padding: "0.35rem 1rem",
                   borderRadius: "500px",
                   cursor: "pointer",
                   fontSize: "0.8rem",
-                  fontWeight: 700,
+                  fontWeight: 600,
                   transition: "all 0.2s ease"
                 }}
               >
@@ -458,11 +471,12 @@ export default function App() {
                   background: txType === "withdraw" ? colors.danger : "transparent",
                   color: txType === "withdraw" ? "#ffffff" : colors.textSecondary,
                   border: "none",
+                  fontFamily: "'Inter', sans-serif",
                   padding: "0.35rem 1rem",
                   borderRadius: "500px",
                   cursor: "pointer",
                   fontSize: "0.8rem",
-                  fontWeight: 700,
+                  fontWeight: 600,
                   transition: "all 0.2s ease"
                 }}
               >
@@ -481,6 +495,7 @@ export default function App() {
                 backgroundColor: colors.inputBg,
                 border: "none",
                 color: colors.textPrimary,
+                fontFamily: "'Inter', sans-serif",
                 padding: "0.7rem 1rem",
                 borderRadius: "8px",
                 fontWeight: 600
@@ -507,22 +522,25 @@ export default function App() {
                 backgroundColor: colors.inputBg,
                 border: "none",
                 color: colors.textPrimary,
+                fontFamily: "'Inter', sans-serif",
                 padding: "0.7rem 1rem",
                 borderRadius: "8px",
                 fontWeight: 600
               }}
             />
 
+            {/* Buttons -> Inter 600 */}
             <button
               type="button"
               onClick={handleTransaction}
               style={{
                 backgroundColor: txType === "deposit" ? colors.accent : colors.danger,
-                color: txType === "deposit" ? "#000000" : "#ffffff",
+                color: txType === "deposit" ? colors.accentText : "#ffffff",
                 border: "none",
+                fontFamily: "'Inter', sans-serif",
                 padding: "0.7rem 1.6rem",
                 borderRadius: "500px",
-                fontWeight: 800,
+                fontWeight: 600,
                 fontSize: "0.85rem",
                 cursor: "pointer",
                 letterSpacing: "0.02em"
@@ -536,10 +554,11 @@ export default function App() {
             <div style={{
               marginTop: "1rem",
               padding: "0.8rem 1rem",
-              backgroundColor: toast.isError ? "rgba(241, 94, 108, 0.15)" : "rgba(30, 215, 96, 0.15)",
+              backgroundColor: toast.isError ? "rgba(241, 94, 108, 0.15)" : "rgba(59, 130, 246, 0.12)",
               border: `1px solid ${toast.isError ? colors.danger : colors.accent}`,
               borderRadius: "8px",
               color: toast.isError ? colors.danger : colors.accent,
+              fontFamily: "'Inter', sans-serif",
               fontSize: "0.85rem",
               fontWeight: 600
             }}>
@@ -568,6 +587,7 @@ export default function App() {
               >
                 {/* Header row */}
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "1rem", flexWrap: "wrap", gap: "0.5rem" }}>
+                  {/* Goal names -> Manrope 700 */}
                   <input
                     aria-label="Goal Title"
                     type="text"
@@ -578,8 +598,9 @@ export default function App() {
                       border: "none",
                       borderBottom: `1px dashed ${colors.border}`,
                       color: colors.textPrimary,
+                      fontFamily: "'Manrope', sans-serif",
                       fontSize: "1.3rem",
-                      fontWeight: 800,
+                      fontWeight: 700,
                       padding: "0.2rem 0"
                     }}
                   />
@@ -587,17 +608,19 @@ export default function App() {
                   {/* Mode Pill Switch & Delete */}
                   <div style={{ display: "flex", gap: "0.6rem", alignItems: "center" }}>
                     <div style={{ display: "flex", backgroundColor: colors.inputBg, padding: "2px", borderRadius: "500px" }}>
+                      {/* Buttons -> Inter 600 */}
                       <button
                         type="button"
                         onClick={() => updateGoal(goal.id, "mode", "bySavings")}
                         style={{
                           background: goal.mode === "bySavings" ? colors.accent : "transparent",
-                          color: goal.mode === "bySavings" ? "#000000" : colors.textSecondary,
+                          color: goal.mode === "bySavings" ? colors.accentText : colors.textSecondary,
                           border: "none",
+                          fontFamily: "'Inter', sans-serif",
                           padding: "0.25rem 0.7rem",
                           borderRadius: "500px",
                           fontSize: "0.75rem",
-                          fontWeight: 700,
+                          fontWeight: 600,
                           cursor: "pointer"
                         }}
                       >
@@ -608,12 +631,13 @@ export default function App() {
                         onClick={() => updateGoal(goal.id, "mode", "byDeadline")}
                         style={{
                           background: goal.mode === "byDeadline" ? colors.accent : "transparent",
-                          color: goal.mode === "byDeadline" ? "#000000" : colors.textSecondary,
+                          color: goal.mode === "byDeadline" ? colors.accentText : colors.textSecondary,
                           border: "none",
+                          fontFamily: "'Inter', sans-serif",
                           padding: "0.25rem 0.7rem",
                           borderRadius: "500px",
                           fontSize: "0.75rem",
-                          fontWeight: 700,
+                          fontWeight: 600,
                           cursor: "pointer"
                         }}
                       >
@@ -641,11 +665,14 @@ export default function App() {
                   </div>
                 </div>
 
-                {/* Spotify-style Track Progress Bar */}
+                {/* Progress Visual */}
                 <div style={{ marginBottom: "1.2rem" }}>
                   <div style={{ display: "flex", justifyContent: "space-between", fontSize: "0.8rem", marginBottom: "0.4rem" }}>
-                    <span style={{ color: colors.textSecondary }}>Progress ({result.progressPercentage}%)</span>
-                    <span style={{ color: colors.accent, fontWeight: 700 }}>
+                    <span style={{ fontFamily: "'Inter', sans-serif", color: colors.textSecondary, fontWeight: 400 }}>
+                      Progress ({result.progressPercentage}%)
+                    </span>
+                    {/* Progress figures -> Inter 700 */}
+                    <span style={{ fontFamily: "'Inter', sans-serif", color: colors.accent, fontWeight: 700 }}>
                       ₹{currentBalance.toLocaleString()} / ₹{goal.targetPrice.toLocaleString()}
                     </span>
                   </div>
@@ -666,12 +693,14 @@ export default function App() {
                   </div>
                 </div>
 
-                {/* Motivational Milestone Callout */}
+                {/* Motivational Helper text -> Inter 400 */}
                 <div style={{
                   backgroundColor: colors.inputBg,
                   padding: "0.6rem 0.9rem",
                   borderRadius: "8px",
                   fontSize: "0.85rem",
+                  fontFamily: "'Inter', sans-serif",
+                  fontWeight: 400,
                   color: colors.textPrimary,
                   marginBottom: "1.2rem",
                   borderLeft: `3px solid ${colors.gold}`
@@ -682,9 +711,11 @@ export default function App() {
                 {/* Goal Parameters Grid */}
                 <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(170px, 1fr))", gap: "1rem" }}>
                   <div>
-                    <label htmlFor={`target-${goal.id}`} style={{ fontSize: "0.75rem", color: colors.textSecondary, fontWeight: 600 }}>
+                    {/* Form labels -> Inter 600 */}
+                    <label htmlFor={`target-${goal.id}`} style={{ fontFamily: "'Inter', sans-serif", fontSize: "0.75rem", color: colors.textSecondary, fontWeight: 600 }}>
                       Target Cost Today (₹)
                     </label>
+                    {/* Currency figures -> Inter 700 */}
                     <input
                       id={`target-${goal.id}`}
                       type="number"
@@ -696,9 +727,11 @@ export default function App() {
                         backgroundColor: colors.inputBg,
                         border: "none",
                         color: colors.textPrimary,
+                        fontFamily: "'Inter', sans-serif",
+                        fontSize: "1rem",
                         padding: "0.55rem 0.75rem",
                         borderRadius: "6px",
-                        fontWeight: 600,
+                        fontWeight: 700,
                         marginTop: "0.3rem",
                         boxSizing: "border-box"
                       }}
@@ -706,9 +739,11 @@ export default function App() {
                   </div>
 
                   <div>
-                    <label htmlFor={`deposit-${goal.id}`} style={{ fontSize: "0.75rem", color: colors.textSecondary, fontWeight: 600 }}>
+                    {/* Form labels -> Inter 600 */}
+                    <label htmlFor={`deposit-${goal.id}`} style={{ fontFamily: "'Inter', sans-serif", fontSize: "0.75rem", color: colors.textSecondary, fontWeight: 600 }}>
                       Opening Base (₹)
                     </label>
+                    {/* Currency figures -> Inter 700 */}
                     <input
                       id={`deposit-${goal.id}`}
                       type="number"
@@ -720,9 +755,11 @@ export default function App() {
                         backgroundColor: colors.inputBg,
                         border: "none",
                         color: colors.textPrimary,
+                        fontFamily: "'Inter', sans-serif",
+                        fontSize: "1rem",
                         padding: "0.55rem 0.75rem",
                         borderRadius: "6px",
-                        fontWeight: 600,
+                        fontWeight: 700,
                         marginTop: "0.3rem",
                         boxSizing: "border-box"
                       }}
@@ -731,9 +768,11 @@ export default function App() {
 
                   {goal.mode === "bySavings" ? (
                     <div>
-                      <label htmlFor={`alloc-${goal.id}`} style={{ fontSize: "0.75rem", color: colors.textSecondary, fontWeight: 600 }}>
+                      {/* Form labels -> Inter 600 */}
+                      <label htmlFor={`alloc-${goal.id}`} style={{ fontFamily: "'Inter', sans-serif", fontSize: "0.75rem", color: colors.textSecondary, fontWeight: 600 }}>
                         Monthly Savings (₹)
                       </label>
+                      {/* Currency figures -> Inter 700 */}
                       <input
                         id={`alloc-${goal.id}`}
                         type="number"
@@ -745,6 +784,8 @@ export default function App() {
                           backgroundColor: colors.inputBg,
                           border: "none",
                           color: colors.accent,
+                          fontFamily: "'Inter', sans-serif",
+                          fontSize: "1rem",
                           padding: "0.55rem 0.75rem",
                           borderRadius: "6px",
                           fontWeight: 700,
@@ -755,9 +796,11 @@ export default function App() {
                     </div>
                   ) : (
                     <div>
-                      <label htmlFor={`deadline-${goal.id}`} style={{ fontSize: "0.75rem", color: colors.textSecondary, fontWeight: 600 }}>
+                      {/* Form labels -> Inter 600 */}
+                      <label htmlFor={`deadline-${goal.id}`} style={{ fontFamily: "'Inter', sans-serif", fontSize: "0.75rem", color: colors.textSecondary, fontWeight: 600 }}>
                         Deadline (Months)
                       </label>
+                      {/* Timeline figures -> Inter 700 */}
                       <input
                         id={`deadline-${goal.id}`}
                         type="number"
@@ -769,6 +812,8 @@ export default function App() {
                           backgroundColor: colors.inputBg,
                           border: "none",
                           color: colors.blue,
+                          fontFamily: "'Inter', sans-serif",
+                          fontSize: "1rem",
                           padding: "0.55rem 0.75rem",
                           borderRadius: "6px",
                           fontWeight: 700,
@@ -780,7 +825,8 @@ export default function App() {
                   )}
 
                   <div>
-                    <label htmlFor={`inflation-${goal.id}`} style={{ fontSize: "0.75rem", color: colors.textSecondary, fontWeight: 600 }}>
+                    {/* Form labels -> Inter 600 */}
+                    <label htmlFor={`inflation-${goal.id}`} style={{ fontFamily: "'Inter', sans-serif", fontSize: "0.75rem", color: colors.textSecondary, fontWeight: 600 }}>
                       Annual Drift (%)
                     </label>
                     <input
@@ -793,9 +839,11 @@ export default function App() {
                         backgroundColor: colors.inputBg,
                         border: "none",
                         color: colors.textPrimary,
+                        fontFamily: "'Inter', sans-serif",
+                        fontSize: "1rem",
                         padding: "0.55rem 0.75rem",
                         borderRadius: "6px",
-                        fontWeight: 600,
+                        fontWeight: 700,
                         marginTop: "0.3rem",
                         boxSizing: "border-box"
                       }}
@@ -817,7 +865,7 @@ export default function App() {
                   <div>
                     {goal.mode === "bySavings" ? (
                       <>
-                        <span style={{ fontSize: "0.8rem", color: colors.textSecondary }}>Timeline: </span>
+                        <span style={{ fontFamily: "'Inter', sans-serif", fontSize: "0.8rem", color: colors.textSecondary, fontWeight: 400 }}>Timeline: </span>
                         {result.isUnreachable ? (
                           <div style={{ color: colors.danger, fontSize: "0.85rem", marginTop: "0.2rem" }}>
                             <strong>Allocation cannot outpace inflation.</strong>
@@ -827,26 +875,26 @@ export default function App() {
                           </div>
                         ) : (
                           <>
-                            <strong style={{ fontSize: "1.25rem", color: colors.accent, fontWeight: 800 }}>
+                            <strong style={{ fontFamily: "'Inter', sans-serif", fontSize: "1.25rem", color: colors.accent, fontWeight: 700 }}>
                               {result.realMonthsToGoal} months
                             </strong>
-                            <span style={{ fontSize: "0.8rem", color: colors.textSecondary }}> ({(result.realMonthsToGoal / 12).toFixed(1)} yrs)</span>
+                            <span style={{ fontFamily: "'Inter', sans-serif", fontSize: "0.8rem", color: colors.textSecondary, fontWeight: 400 }}> ({(result.realMonthsToGoal / 12).toFixed(1)} yrs)</span>
                           </>
                         )}
                       </>
                     ) : (
                       <div>
-                        <span style={{ fontSize: "0.8rem", color: colors.textSecondary }}>Required Monthly Allocation: </span>
-                        <strong style={{ fontSize: "1.25rem", color: colors.accent, fontWeight: 800 }}>
+                        <span style={{ fontFamily: "'Inter', sans-serif", fontSize: "0.8rem", color: colors.textSecondary, fontWeight: 400 }}>Required Monthly Allocation: </span>
+                        <strong style={{ fontFamily: "'Inter', sans-serif", fontSize: "1.25rem", color: colors.accent, fontWeight: 700 }}>
                           ₹{result.requiredMonthlyForDeadline.toLocaleString()} / mo
                         </strong>
                       </div>
                     )}
                   </div>
 
-                  <div style={{ fontSize: "0.8rem", color: colors.textSecondary }}>
+                  <div style={{ fontFamily: "'Inter', sans-serif", fontSize: "0.8rem", color: colors.textSecondary, fontWeight: 400 }}>
                     Future estimated cost:{" "}
-                    <strong style={{ color: goal.annualInflationRate < 0 ? colors.accent : colors.danger }}>
+                    <strong style={{ fontFamily: "'Inter', sans-serif", fontWeight: 700, color: goal.annualInflationRate < 0 ? colors.accent : colors.danger }}>
                       ₹{result.realFuturePrice.toLocaleString()}
                     </strong>
                   </div>
@@ -865,11 +913,12 @@ export default function App() {
               backgroundColor: "transparent",
               border: `2px dashed ${colors.border}`,
               color: colors.accent,
+              fontFamily: "'Inter', sans-serif",
               padding: "0.8rem 2.2rem",
               borderRadius: "500px",
               cursor: "pointer",
               fontSize: "0.95rem",
-              fontWeight: 700,
+              fontWeight: 600,
               letterSpacing: "0.02em"
             }}
           >
@@ -885,8 +934,8 @@ export default function App() {
           marginBottom: "2rem",
           boxShadow: isDark ? "0 4px 16px rgba(0,0,0,0.4)" : "0 4px 14px rgba(0,0,0,0.06)"
         }}>
-          <h2 style={{ fontSize: "1.1rem", fontWeight: 700, margin: "0 0 0.3rem" }}>Monthly Living Expenses</h2>
-          <p style={{ fontSize: "0.8rem", color: colors.textSecondary, margin: "0 0 1rem" }}>
+          <h2 style={{ fontFamily: "'Manrope', sans-serif", fontSize: "1.1rem", fontWeight: 700, margin: "0 0 0.3rem" }}>Monthly Living Expenses</h2>
+          <p style={{ fontFamily: "'Inter', sans-serif", fontSize: "0.8rem", fontWeight: 400, color: colors.textSecondary, margin: "0 0 1rem" }}>
             Track recurring bills so savings targets stay within actual cashflow limits.
           </p>
 
@@ -902,6 +951,7 @@ export default function App() {
                 backgroundColor: colors.inputBg,
                 border: "none",
                 color: colors.textPrimary,
+                fontFamily: "'Inter', sans-serif",
                 padding: "0.6rem 0.9rem",
                 borderRadius: "8px",
                 fontWeight: 600
@@ -918,6 +968,7 @@ export default function App() {
                 backgroundColor: colors.inputBg,
                 border: "none",
                 color: colors.textPrimary,
+                fontFamily: "'Inter', sans-serif",
                 padding: "0.6rem 0.9rem",
                 borderRadius: "8px",
                 fontWeight: 600
@@ -928,12 +979,13 @@ export default function App() {
               onClick={addExpense}
               style={{
                 backgroundColor: colors.accent,
-                color: "#000000",
+                color: colors.accentText,
                 border: "none",
+                fontFamily: "'Inter', sans-serif",
                 padding: "0.6rem 1.4rem",
                 borderRadius: "500px",
                 cursor: "pointer",
-                fontWeight: 800,
+                fontWeight: 600,
                 fontSize: "0.85rem"
               }}
             >
@@ -953,12 +1005,13 @@ export default function App() {
                   backgroundColor: colors.inputBg,
                   borderRadius: "8px",
                   fontSize: "0.85rem",
+                  fontFamily: "'Inter', sans-serif",
                   fontWeight: 600
                 }}
               >
                 <span>{e.category}</span>
                 <div style={{ display: "flex", gap: "1rem", alignItems: "center" }}>
-                  <span>₹{e.amount.toLocaleString()}</span>
+                  <span style={{ fontWeight: 700 }}>₹{e.amount.toLocaleString()}</span>
                   <button
                     type="button"
                     onClick={() => removeExpense(e.id)}
@@ -981,7 +1034,7 @@ export default function App() {
           boxShadow: isDark ? "0 4px 16px rgba(0,0,0,0.4)" : "0 4px 14px rgba(0,0,0,0.06)"
         }}>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "1rem" }}>
-            <h2 style={{ fontSize: "1.1rem", fontWeight: 700, margin: 0 }}>Savings Activity Log</h2>
+            <h2 style={{ fontFamily: "'Manrope', sans-serif", fontSize: "1.1rem", fontWeight: 700, margin: 0 }}>Savings Activity Log</h2>
             {transactions.length > 0 && (
               <button
                 type="button"
@@ -991,6 +1044,7 @@ export default function App() {
                   border: "none",
                   color: colors.textSecondary,
                   cursor: "pointer",
+                  fontFamily: "'Inter', sans-serif",
                   fontSize: "0.75rem",
                   fontWeight: 600
                 }}
@@ -1001,7 +1055,7 @@ export default function App() {
           </div>
 
           {transactions.length === 0 ? (
-            <div style={{ color: colors.textSecondary, fontSize: "0.85rem", fontStyle: "italic" }}>
+            <div style={{ fontFamily: "'Inter', sans-serif", color: colors.textSecondary, fontSize: "0.85rem", fontWeight: 400, fontStyle: "italic" }}>
               No deposits or withdrawals recorded yet.
             </div>
           ) : (
@@ -1020,8 +1074,8 @@ export default function App() {
                   }}
                 >
                   <div style={{ display: "flex", flexDirection: "column" }}>
-                    <span style={{ fontWeight: 700 }}>{tx.goalTitle}</span>
-                    <span style={{ color: colors.textSecondary, fontSize: "0.75rem" }}>
+                    <span style={{ fontFamily: "'Inter', sans-serif", fontWeight: 600 }}>{tx.goalTitle}</span>
+                    <span style={{ fontFamily: "'Inter', sans-serif", color: colors.textSecondary, fontSize: "0.75rem", fontWeight: 400 }}>
                       {new Date(tx.isoTimestamp).toLocaleString(undefined, {
                         dateStyle: "medium",
                         timeStyle: "short",
@@ -1030,8 +1084,9 @@ export default function App() {
                   </div>
 
                   <span style={{
+                    fontFamily: "'Inter', sans-serif",
                     color: tx.type === "deposit" ? colors.accent : colors.danger,
-                    fontWeight: 800,
+                    fontWeight: 700,
                     fontSize: "0.95rem"
                   }}>
                     {tx.type === "deposit" ? "+" : "−"}₹{tx.amount.toLocaleString()}
@@ -1049,6 +1104,8 @@ export default function App() {
           textAlign: "center",
           fontSize: "0.75rem",
           color: colors.textSecondary,
+          fontFamily: "'Inter', sans-serif",
+          fontWeight: 400,
           lineHeight: 1.6
         }}>
           <p style={{ margin: "0 0 0.3rem" }}>
