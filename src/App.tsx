@@ -7,6 +7,7 @@ const STORAGE_GOALS = "fp_goals_v3";
 const STORAGE_LOGS = "fp_logs_v3";
 const STORAGE_EXPENSES = "fp_expenses_v3";
 const STORAGE_SALARY = "fp_salary_v3";
+const STORAGE_THEME = "fp_theme_v1";
 
 const DEFAULT_GOALS: SavingsGoalItem[] = [
   {
@@ -37,6 +38,10 @@ const DEFAULT_EXPENSES: ExpenseItem[] = [
 ];
 
 export default function App() {
+  const [theme, setTheme] = useState<"dark" | "light">(() =>
+    safeLoad(STORAGE_THEME, "dark", (t) => t === "dark" || t === "light")
+  );
+
   const [monthlySalary, setMonthlySalary] = useState<number>(() =>
     safeLoad(STORAGE_SALARY, 50000, (d) => typeof d === "number")
   );
@@ -66,13 +71,13 @@ export default function App() {
   const toastTimerRef = useRef<number | null>(null);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
 
-  // Sync to localStorage
+  // Sync state
+  useEffect(() => safeSave(STORAGE_THEME, theme), [theme]);
   useEffect(() => safeSave(STORAGE_GOALS, goals), [goals]);
   useEffect(() => safeSave(STORAGE_LOGS, transactions), [transactions]);
   useEffect(() => safeSave(STORAGE_EXPENSES, expenses), [expenses]);
   useEffect(() => safeSave(STORAGE_SALARY, monthlySalary), [monthlySalary]);
 
-  // Sync selected transaction goal
   useEffect(() => {
     if (!goals.some((g) => g.id === txGoalId) && goals.length > 0) {
       setTxGoalId(goals[0].id);
@@ -88,6 +93,23 @@ export default function App() {
     }, 4500);
   };
 
+  // Color Palette Definitions (Spotify Dark / Clean Contrast Light)
+  const isDark = theme === "dark";
+  const colors = {
+    bg: isDark ? "#121212" : "#f4f4f6",
+    surface: isDark ? "#181818" : "#ffffff",
+    surfaceHover: isDark ? "#282828" : "#f0f0f2",
+    inputBg: isDark ? "#242424" : "#e9e9ed",
+    border: isDark ? "#2a2a2a" : "#dcdce0",
+    textPrimary: isDark ? "#ffffff" : "#121212",
+    textSecondary: isDark ? "#b3b3b3" : "#6a6a75",
+    accent: "#1ed760", // Spotify Green
+    accentHover: "#1fdf64",
+    danger: "#f15e6c",
+    blue: "#3d91f4",
+    gold: "#e6b439"
+  };
+
   // Financial aggregates
   const totalExpenses = expenses.reduce((sum, e) => sum + e.amount, 0);
   const disposableIncome = Math.max(0, monthlySalary - totalExpenses);
@@ -100,7 +122,6 @@ export default function App() {
 
   const remainingAfterCommitments = disposableIncome - totalMonthlyCommitted;
 
-  // Goal Handlers
   const addGoal = () => {
     const id = `g-${Date.now()}`;
     const newGoal: SavingsGoalItem = {
@@ -123,22 +144,21 @@ export default function App() {
 
   const removeGoal = (id: string, title: string) => {
     if (goals.length <= 1) {
-      notify("You must keep at least one active goal.", true);
+      notify("Keep at least one active goal.", true);
       return;
     }
-    if (!window.confirm(`Are you sure you want to delete "${title}"? All associated transaction records will be removed.`)) {
+    if (!window.confirm(`Delete "${title}"? All associated transaction records will be removed.`)) {
       return;
     }
     setGoals((prev) => prev.filter((g) => g.id !== id));
     setTransactions((prev) => prev.filter((t) => t.goalId !== id));
-    notify(`Deleted goal "${title}" and its transactions.`);
+    notify(`Deleted goal "${title}".`);
   };
 
-  // Transaction Handler
   const handleTransaction = () => {
     const amt = Number(txAmount);
     if (isNaN(amt) || amt <= 0) {
-      notify("Please enter a valid amount greater than ₹0", true);
+      notify("Enter a valid amount greater than ₹0", true);
       return;
     }
     const target = goals.find((g) => g.id === txGoalId);
@@ -167,24 +187,21 @@ export default function App() {
 
     notify(
       txType === "deposit"
-        ? `Added ₹${amt.toLocaleString()} to "${target.title}". ₹${remainingToTarget.toLocaleString()} left to base price!`
+        ? `Deposited ₹${amt.toLocaleString()} to "${target.title}". ₹${remainingToTarget.toLocaleString()} left!`
         : `Withdrew ₹${amt.toLocaleString()} from "${target.title}". Current balance: ₹${newBalance.toLocaleString()}`
     );
   };
 
   const clearHistory = () => {
-    if (!window.confirm("Clear all transaction logs? Note: Base opening deposits configured inside goals will remain.")) {
-      return;
-    }
+    if (!window.confirm("Clear all transaction logs?")) return;
     setTransactions([]);
-    notify("Transaction activity log cleared.");
+    notify("Activity log cleared.");
   };
 
-  // Expense Handlers
   const addExpense = () => {
     const amt = Number(expenseAmount);
     if (!expenseCategory.trim() || isNaN(amt) || amt <= 0) {
-      notify("Enter a valid expense category and amount.", true);
+      notify("Enter a valid category and amount.", true);
       return;
     }
     setExpenses((prev) => [...prev, { id: `e-${Date.now()}`, category: expenseCategory.trim(), amount: amt }]);
@@ -196,7 +213,6 @@ export default function App() {
     setExpenses((prev) => prev.filter((e) => e.id !== id));
   };
 
-  // JSON Import / Export
   const exportBackupJSON = () => {
     const backupData = {
       version: 3,
@@ -213,7 +229,7 @@ export default function App() {
     a.download = `finance_planner_backup_${new Date().toISOString().slice(0, 10)}.json`;
     a.click();
     URL.revokeObjectURL(url);
-    notify("Backup downloaded successfully.");
+    notify("Backup downloaded.");
   };
 
   const importBackupJSON = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -228,12 +244,12 @@ export default function App() {
           setGoals(data.goals);
           setTransactions(data.transactions);
           if (Array.isArray(data.expenses)) setExpenses(data.expenses);
-          notify("Data restored from backup successfully.");
+          notify("Data restored successfully.");
         } else {
           notify("Invalid backup format.", true);
         }
       } catch {
-        notify("Failed to parse the backup JSON file.", true);
+        notify("Failed to parse backup JSON file.", true);
       }
     };
     reader.readAsText(file);
@@ -243,126 +259,231 @@ export default function App() {
   return (
     <div style={{
       minHeight: "100vh",
-      backgroundColor: "#0d1117",
-      color: "#c9d1d9",
-      fontFamily: "system-ui, -apple-system, sans-serif",
-      padding: "2rem 1rem",
+      backgroundColor: colors.bg,
+      color: colors.textPrimary,
+      fontFamily: "'Circular', -apple-system, BlinkMacSystemFont, Roboto, sans-serif",
+      padding: "2.5rem 1rem",
       display: "flex",
-      justifyContent: "center"
+      justifyContent: "center",
+      transition: "background-color 0.25s ease, color 0.25s ease"
     }}>
-      <div style={{ maxWidth: "860px", width: "100%" }}>
+      <div style={{ maxWidth: "880px", width: "100%" }}>
         
-        {/* Header */}
-        <header style={{ borderBottom: "1px solid #30363d", paddingBottom: "1.2rem", marginBottom: "1.5rem" }}>
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", flexWrap: "wrap", gap: "1rem" }}>
+        {/* Top App Bar */}
+        <header style={{ marginBottom: "2rem" }}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "1rem" }}>
             <div>
-              <h1 style={{ color: "#f0f6fc", fontSize: "1.6rem", margin: 0 }}>Smart Multi-Goal Life Planner</h1>
-              <p style={{ color: "#8b949e", fontSize: "0.875rem", margin: "0.4rem 0 0" }}>
-                Solve for exact timelines, deadlined goals, and true disposable income feasibility.
+              <div style={{ display: "flex", alignItems: "center", gap: "0.6rem" }}>
+                <span style={{ fontSize: "1.8rem" }}>💸</span>
+                <h1 style={{ fontSize: "1.75rem", fontWeight: 800, margin: 0, letterSpacing: "-0.03em" }}>
+                  Finance Planner
+                </h1>
+              </div>
+              <p style={{ color: colors.textSecondary, fontSize: "0.9rem", margin: "0.3rem 0 0" }}>
+                Multi-goal tracking with true compounding and disposable budget checks.
               </p>
             </div>
 
-            {/* Backup actions */}
-            <div style={{ display: "flex", gap: "0.5rem" }}>
+            {/* Actions & Theme Switch */}
+            <div style={{ display: "flex", alignItems: "center", gap: "0.6rem" }}>
+              <button
+                type="button"
+                onClick={() => setTheme(isDark ? "light" : "dark")}
+                aria-label="Toggle Theme"
+                style={{
+                  backgroundColor: colors.surface,
+                  border: `1px solid ${colors.border}`,
+                  color: colors.textPrimary,
+                  borderRadius: "500px",
+                  padding: "0.45rem 1rem",
+                  fontSize: "0.85rem",
+                  fontWeight: 600,
+                  cursor: "pointer",
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "0.4rem"
+                }}
+              >
+                <span>{isDark ? "☀️ Light" : "🌙 Dark"}</span>
+              </button>
+
               <button
                 type="button"
                 onClick={exportBackupJSON}
-                style={{ backgroundColor: "#21262d", border: "1px solid #30363d", color: "#c9d1d9", padding: "0.4rem 0.8rem", borderRadius: "6px", fontSize: "0.8rem", cursor: "pointer" }}
+                style={{
+                  backgroundColor: colors.surface,
+                  border: `1px solid ${colors.border}`,
+                  color: colors.textPrimary,
+                  borderRadius: "500px",
+                  padding: "0.45rem 0.9rem",
+                  fontSize: "0.85rem",
+                  fontWeight: 600,
+                  cursor: "pointer"
+                }}
               >
-                Export JSON ⤓
+                Export
               </button>
+
               <button
                 type="button"
                 onClick={() => fileInputRef.current?.click()}
-                style={{ backgroundColor: "#21262d", border: "1px solid #30363d", color: "#c9d1d9", padding: "0.4rem 0.8rem", borderRadius: "6px", fontSize: "0.8rem", cursor: "pointer" }}
+                style={{
+                  backgroundColor: colors.surface,
+                  border: `1px solid ${colors.border}`,
+                  color: colors.textPrimary,
+                  borderRadius: "500px",
+                  padding: "0.45rem 0.9rem",
+                  fontSize: "0.85rem",
+                  fontWeight: 600,
+                  cursor: "pointer"
+                }}
               >
-                Import JSON ⤒
+                Import
               </button>
               <input ref={fileInputRef} type="file" accept=".json" onChange={importBackupJSON} style={{ display: "none" }} />
             </div>
           </div>
 
-          {/* Income & Disposable Sanity Overview */}
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: "1rem", backgroundColor: "#161b22", padding: "1rem", borderRadius: "8px", border: "1px solid #30363d", marginTop: "1.2rem" }}>
-            <div>
-              <label htmlFor="salaryInput" style={{ fontSize: "0.8rem", color: "#8b949e" }}>Monthly Salary (₹)</label>
-              <input
-                id="salaryInput"
-                type="number"
-                value={monthlySalary || ""}
-                onChange={(e) => setMonthlySalary(Math.max(0, Number(e.target.value)))}
-                style={{ width: "100%", backgroundColor: "#0d1117", border: "1px solid #30363d", color: "#58a6ff", fontSize: "1.1rem", fontWeight: "bold", padding: "0.4rem", borderRadius: "6px", boxSizing: "border-box", marginTop: "0.2rem" }}
-              />
+          {/* Spotify-style Stats Dashboard Cards */}
+          <div style={{
+            display: "grid",
+            gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))",
+            gap: "1rem",
+            marginTop: "1.5rem"
+          }}>
+            <div style={{
+              backgroundColor: colors.surface,
+              padding: "1.2rem",
+              borderRadius: "10px",
+              boxShadow: isDark ? "0 4px 12px rgba(0,0,0,0.5)" : "0 4px 12px rgba(0,0,0,0.06)"
+            }}>
+              <label htmlFor="salaryInput" style={{ fontSize: "0.8rem", color: colors.textSecondary, textTransform: "uppercase", letterSpacing: "0.05em", fontWeight: 700 }}>
+                Monthly Salary
+              </label>
+              <div style={{ display: "flex", alignItems: "center", gap: "0.4rem", marginTop: "0.4rem" }}>
+                <span style={{ fontSize: "1.2rem", fontWeight: 700, color: colors.accent }}>₹</span>
+                <input
+                  id="salaryInput"
+                  type="number"
+                  value={monthlySalary || ""}
+                  onChange={(e) => setMonthlySalary(Math.max(0, Number(e.target.value)))}
+                  style={{
+                    backgroundColor: colors.inputBg,
+                    border: "none",
+                    color: colors.textPrimary,
+                    fontSize: "1.25rem",
+                    fontWeight: 700,
+                    padding: "0.4rem 0.6rem",
+                    borderRadius: "6px",
+                    width: "100%"
+                  }}
+                />
+              </div>
             </div>
 
-            <div>
-              <div style={{ fontSize: "0.8rem", color: "#8b949e" }}>Living Expenses</div>
-              <div style={{ fontSize: "1.1rem", fontWeight: "bold", color: "#f0f6fc", marginTop: "0.3rem" }}>
-                ₹{totalExpenses.toLocaleString()} / mo
+            <div style={{
+              backgroundColor: colors.surface,
+              padding: "1.2rem",
+              borderRadius: "10px",
+              boxShadow: isDark ? "0 4px 12px rgba(0,0,0,0.5)" : "0 4px 12px rgba(0,0,0,0.06)"
+            }}>
+              <div style={{ fontSize: "0.8rem", color: colors.textSecondary, textTransform: "uppercase", letterSpacing: "0.05em", fontWeight: 700 }}>
+                Living Expenses
               </div>
-              <div style={{ fontSize: "0.75rem", color: "#8b949e" }}>Disposable: ₹{disposableIncome.toLocaleString()}</div>
+              <div style={{ fontSize: "1.4rem", fontWeight: 800, marginTop: "0.4rem" }}>
+                ₹{totalExpenses.toLocaleString()} <span style={{ fontSize: "0.8rem", color: colors.textSecondary, fontWeight: 400 }}>/ mo</span>
+              </div>
+              <div style={{ fontSize: "0.75rem", color: colors.textSecondary, marginTop: "0.2rem" }}>
+                Disposable: <strong style={{ color: colors.textPrimary }}>₹{disposableIncome.toLocaleString()}</strong>
+              </div>
             </div>
 
-            <div>
-              <div style={{ fontSize: "0.8rem", color: "#8b949e" }}>Total Committed for Goals</div>
-              <div style={{ fontSize: "1.1rem", fontWeight: "bold", color: remainingAfterCommitments < 0 ? "#f85149" : "#3fb950", marginTop: "0.3rem" }}>
-                ₹{totalMonthlyCommitted.toLocaleString()} / mo
+            <div style={{
+              backgroundColor: colors.surface,
+              padding: "1.2rem",
+              borderRadius: "10px",
+              boxShadow: isDark ? "0 4px 12px rgba(0,0,0,0.5)" : "0 4px 12px rgba(0,0,0,0.06)"
+            }}>
+              <div style={{ fontSize: "0.8rem", color: colors.textSecondary, textTransform: "uppercase", letterSpacing: "0.05em", fontWeight: 700 }}>
+                Committed to Goals
               </div>
-              <div style={{ fontSize: "0.75rem", color: remainingAfterCommitments < 0 ? "#f85149" : "#8b949e" }}>
-                {remainingAfterCommitments < 0 ? "Exceeds disposable income!" : `₹${remainingAfterCommitments.toLocaleString()} safety buffer`}
+              <div style={{ fontSize: "1.4rem", fontWeight: 800, color: remainingAfterCommitments < 0 ? colors.danger : colors.accent, marginTop: "0.4rem" }}>
+                ₹{totalMonthlyCommitted.toLocaleString()} <span style={{ fontSize: "0.8rem", color: colors.textSecondary, fontWeight: 400 }}>/ mo</span>
+              </div>
+              <div style={{ fontSize: "0.75rem", color: remainingAfterCommitments < 0 ? colors.danger : colors.textSecondary, marginTop: "0.2rem" }}>
+                {remainingAfterCommitments < 0 ? "⚠ Exceeds disposable balance!" : `₹${remainingAfterCommitments.toLocaleString()} buffer unallocated`}
               </div>
             </div>
           </div>
         </header>
 
-        {/* Deposit / Withdraw Activity Panel */}
-        <section style={{ backgroundColor: "#161b22", border: "1px solid #30363d", borderRadius: "8px", padding: "1.2rem", marginBottom: "2rem" }}>
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "0.8rem", flexWrap: "wrap", gap: "0.5rem" }}>
-            <h3 style={{ margin: 0, color: "#f0f6fc", fontSize: "1rem" }}>Piggy Bank Transactions</h3>
-            
-            <div style={{ display: "flex", gap: "0.3rem", backgroundColor: "#0d1117", padding: "0.2rem", borderRadius: "6px", border: "1px solid #30363d" }}>
+        {/* Transaction Action Panel */}
+        <section style={{
+          backgroundColor: colors.surface,
+          borderRadius: "12px",
+          padding: "1.4rem",
+          marginBottom: "2rem",
+          boxShadow: isDark ? "0 6px 16px rgba(0,0,0,0.4)" : "0 4px 12px rgba(0,0,0,0.05)"
+        }}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "1rem", flexWrap: "wrap", gap: "0.8rem" }}>
+            <div>
+              <h2 style={{ fontSize: "1.1rem", fontWeight: 700, margin: 0 }}>Piggy Bank Transactions</h2>
+              <p style={{ fontSize: "0.8rem", color: colors.textSecondary, margin: "0.2rem 0 0" }}>Update your tangible savings progress.</p>
+            </div>
+
+            {/* Pill Toggle Button */}
+            <div style={{ display: "flex", backgroundColor: colors.inputBg, padding: "3px", borderRadius: "500px" }}>
               <button
                 type="button"
                 onClick={() => setTxType("deposit")}
                 style={{
-                  background: txType === "deposit" ? "#238636" : "transparent",
-                  color: "#f0f6fc",
+                  background: txType === "deposit" ? colors.accent : "transparent",
+                  color: txType === "deposit" ? "#000000" : colors.textSecondary,
                   border: "none",
-                  padding: "0.3rem 0.8rem",
-                  borderRadius: "4px",
+                  padding: "0.35rem 1rem",
+                  borderRadius: "500px",
                   cursor: "pointer",
                   fontSize: "0.8rem",
-                  fontWeight: txType === "deposit" ? "bold" : "normal"
+                  fontWeight: 700,
+                  transition: "all 0.2s ease"
                 }}
               >
-                Deposit (+)
+                + Deposit
               </button>
               <button
                 type="button"
                 onClick={() => setTxType("withdraw")}
                 style={{
-                  background: txType === "withdraw" ? "#da3633" : "transparent",
-                  color: "#f0f6fc",
+                  background: txType === "withdraw" ? colors.danger : "transparent",
+                  color: txType === "withdraw" ? "#ffffff" : colors.textSecondary,
                   border: "none",
-                  padding: "0.3rem 0.8rem",
-                  borderRadius: "4px",
+                  padding: "0.35rem 1rem",
+                  borderRadius: "500px",
                   cursor: "pointer",
                   fontSize: "0.8rem",
-                  fontWeight: txType === "withdraw" ? "bold" : "normal"
+                  fontWeight: 700,
+                  transition: "all 0.2s ease"
                 }}
               >
-                Withdraw (−)
+                − Withdraw
               </button>
             </div>
           </div>
 
-          <div style={{ display: "flex", gap: "0.6rem", flexWrap: "wrap" }}>
-            <label htmlFor="txGoalSelect" style={{ display: "none" }}>Select Goal</label>
+          <div style={{ display: "flex", gap: "0.8rem", flexWrap: "wrap" }}>
             <select
-              id="txGoalSelect"
               value={txGoalId}
               onChange={(e) => setTxGoalId(e.target.value)}
-              style={{ flex: 1.5, minWidth: "180px", backgroundColor: "#0d1117", border: "1px solid #30363d", color: "#f0f6fc", padding: "0.6rem", borderRadius: "6px" }}
+              style={{
+                flex: 1.5,
+                minWidth: "180px",
+                backgroundColor: colors.inputBg,
+                border: "none",
+                color: colors.textPrimary,
+                padding: "0.7rem 1rem",
+                borderRadius: "8px",
+                fontWeight: 600
+              }}
             >
               {goals.map((g) => {
                 const bal = computeGoalBalance(g, transactions);
@@ -374,27 +495,36 @@ export default function App() {
               })}
             </select>
 
-            <label htmlFor="txAmountInput" style={{ display: "none" }}>Transaction Amount</label>
             <input
-              id="txAmountInput"
               type="number"
               placeholder="Amount (₹)"
               value={txAmount}
               onChange={(e) => setTxAmount(e.target.value)}
-              style={{ flex: 1, minWidth: "140px", backgroundColor: "#0d1117", border: "1px solid #30363d", color: "#f0f6fc", padding: "0.6rem", borderRadius: "6px" }}
+              style={{
+                flex: 1,
+                minWidth: "140px",
+                backgroundColor: colors.inputBg,
+                border: "none",
+                color: colors.textPrimary,
+                padding: "0.7rem 1rem",
+                borderRadius: "8px",
+                fontWeight: 600
+              }}
             />
 
             <button
               type="button"
               onClick={handleTransaction}
               style={{
-                backgroundColor: txType === "deposit" ? "#238636" : "#da3633",
-                color: "#fff",
+                backgroundColor: txType === "deposit" ? colors.accent : colors.danger,
+                color: txType === "deposit" ? "#000000" : "#ffffff",
                 border: "none",
-                padding: "0.6rem 1.4rem",
-                borderRadius: "6px",
-                fontWeight: "bold",
-                cursor: "pointer"
+                padding: "0.7rem 1.6rem",
+                borderRadius: "500px",
+                fontWeight: 800,
+                fontSize: "0.85rem",
+                cursor: "pointer",
+                letterSpacing: "0.02em"
               }}
             >
               Confirm {txType === "deposit" ? "Deposit" : "Withdrawal"}
@@ -404,12 +534,13 @@ export default function App() {
           {toast && (
             <div style={{
               marginTop: "1rem",
-              padding: "0.75rem 1rem",
-              backgroundColor: toast.isError ? "rgba(218, 54, 51, 0.15)" : "rgba(56, 139, 253, 0.15)",
-              border: `1px solid ${toast.isError ? "#da3633" : "#388bfd"}`,
-              borderRadius: "6px",
-              color: toast.isError ? "#f85149" : "#58a6ff",
-              fontSize: "0.85rem"
+              padding: "0.8rem 1rem",
+              backgroundColor: toast.isError ? "rgba(241, 94, 108, 0.15)" : "rgba(30, 215, 96, 0.15)",
+              border: `1px solid ${toast.isError ? colors.danger : colors.accent}`,
+              borderRadius: "8px",
+              color: toast.isError ? colors.danger : colors.accent,
+              fontSize: "0.85rem",
+              fontWeight: 600
             }}>
               {toast.msg}
             </div>
@@ -417,57 +548,75 @@ export default function App() {
         </section>
 
         {/* Goal Cards */}
-        <section style={{ display: "flex", flexDirection: "column", gap: "1.5rem", marginBottom: "2rem" }}>
+        <section style={{ display: "flex", flexDirection: "column", gap: "1.5rem", marginBottom: "2.5rem" }}>
           {goals.map((goal) => {
             const currentBalance = computeGoalBalance(goal, transactions);
             const result = evaluateGoal(goal, currentBalance);
             const quote = getMotivationalMessage(result.progressPercentage, result.todayRemaining);
 
             return (
-              <div key={goal.id} style={{ backgroundColor: "#161b22", border: "1px solid #30363d", borderRadius: "10px", padding: "1.4rem" }}>
-                
-                {/* Goal Title & Delete */}
+              <div
+                key={goal.id}
+                style={{
+                  backgroundColor: colors.surface,
+                  borderRadius: "14px",
+                  padding: "1.5rem",
+                  boxShadow: isDark ? "0 4px 16px rgba(0,0,0,0.4)" : "0 4px 14px rgba(0,0,0,0.06)",
+                  transition: "transform 0.2s ease, box-shadow 0.2s ease"
+                }}
+              >
+                {/* Header row */}
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "1rem", flexWrap: "wrap", gap: "0.5rem" }}>
                   <input
                     aria-label="Goal Title"
                     type="text"
                     value={goal.title}
                     onChange={(e) => updateGoal(goal.id, "title", e.target.value)}
-                    style={{ background: "transparent", border: "none", borderBottom: "1px dashed #30363d", color: "#f0f6fc", fontSize: "1.2rem", fontWeight: "bold", padding: "0.2rem" }}
+                    style={{
+                      background: "transparent",
+                      border: "none",
+                      borderBottom: `1px dashed ${colors.border}`,
+                      color: colors.textPrimary,
+                      fontSize: "1.3rem",
+                      fontWeight: 800,
+                      padding: "0.2rem 0"
+                    }}
                   />
 
-                  {/* Mode Selector */}
-                  <div style={{ display: "flex", gap: "0.5rem", alignItems: "center" }}>
-                    <div style={{ display: "flex", backgroundColor: "#0d1117", border: "1px solid #30363d", borderRadius: "6px", padding: "0.2rem" }}>
+                  {/* Mode Pill Switch & Delete */}
+                  <div style={{ display: "flex", gap: "0.6rem", alignItems: "center" }}>
+                    <div style={{ display: "flex", backgroundColor: colors.inputBg, padding: "2px", borderRadius: "500px" }}>
                       <button
                         type="button"
                         onClick={() => updateGoal(goal.id, "mode", "bySavings")}
                         style={{
-                          background: goal.mode === "bySavings" ? "#388bfd" : "transparent",
-                          color: "#f0f6fc",
+                          background: goal.mode === "bySavings" ? colors.accent : "transparent",
+                          color: goal.mode === "bySavings" ? "#000000" : colors.textSecondary,
                           border: "none",
-                          padding: "0.25rem 0.6rem",
-                          borderRadius: "4px",
+                          padding: "0.25rem 0.7rem",
+                          borderRadius: "500px",
                           fontSize: "0.75rem",
+                          fontWeight: 700,
                           cursor: "pointer"
                         }}
                       >
-                        By Monthly Allocation
+                        By Monthly
                       </button>
                       <button
                         type="button"
                         onClick={() => updateGoal(goal.id, "mode", "byDeadline")}
                         style={{
-                          background: goal.mode === "byDeadline" ? "#388bfd" : "transparent",
-                          color: "#f0f6fc",
+                          background: goal.mode === "byDeadline" ? colors.accent : "transparent",
+                          color: goal.mode === "byDeadline" ? "#000000" : colors.textSecondary,
                           border: "none",
-                          padding: "0.25rem 0.6rem",
-                          borderRadius: "4px",
+                          padding: "0.25rem 0.7rem",
+                          borderRadius: "500px",
                           fontSize: "0.75rem",
+                          fontWeight: 700,
                           cursor: "pointer"
                         }}
                       >
-                        By Target Deadline
+                        By Deadline
                       </button>
                     </div>
 
@@ -475,135 +624,228 @@ export default function App() {
                       <button
                         type="button"
                         onClick={() => removeGoal(goal.id, goal.title)}
-                        style={{ background: "none", border: "none", color: "#f85149", cursor: "pointer", fontSize: "0.85rem" }}
+                        aria-label="Delete Goal"
+                        style={{
+                          background: "transparent",
+                          border: "none",
+                          color: colors.textSecondary,
+                          cursor: "pointer",
+                          fontSize: "0.85rem",
+                          padding: "0.3rem"
+                        }}
                       >
-                        Delete Goal ✕
+                        ✕
                       </button>
                     )}
                   </div>
                 </div>
 
-                {/* Single-Source Balance Visual */}
+                {/* Spotify-style Track Progress Bar */}
                 <div style={{ marginBottom: "1.2rem" }}>
                   <div style={{ display: "flex", justifyContent: "space-between", fontSize: "0.8rem", marginBottom: "0.4rem" }}>
-                    <span style={{ color: "#8b949e" }}>Saved ({result.progressPercentage}%)</span>
-                    <span style={{ color: "#3fb950", fontWeight: "bold" }}>
+                    <span style={{ color: colors.textSecondary }}>Progress ({result.progressPercentage}%)</span>
+                    <span style={{ color: colors.accent, fontWeight: 700 }}>
                       ₹{currentBalance.toLocaleString()} / ₹{goal.targetPrice.toLocaleString()}
                     </span>
                   </div>
-                  <div style={{ width: "100%", height: "12px", backgroundColor: "#0d1117", borderRadius: "6px", overflow: "hidden", border: "1px solid #30363d" }}>
+                  <div style={{
+                    width: "100%",
+                    height: "8px",
+                    backgroundColor: colors.inputBg,
+                    borderRadius: "500px",
+                    overflow: "hidden"
+                  }}>
                     <div style={{
                       width: `${result.progressPercentage}%`,
                       height: "100%",
-                      backgroundColor: result.progressPercentage >= 100 ? "#3fb950" : "#238636",
-                      transition: "width 0.3s ease"
+                      backgroundColor: colors.accent,
+                      borderRadius: "500px",
+                      transition: "width 0.4s ease"
                     }} />
                   </div>
                 </div>
 
-                {/* Motivational Quote */}
-                <div style={{ backgroundColor: "#0d1117", padding: "0.6rem 0.8rem", borderRadius: "6px", fontSize: "0.85rem", color: "#e3b341", marginBottom: "1.2rem", borderLeft: "3px solid #e3b341" }}>
+                {/* Motivational Milestone Callout */}
+                <div style={{
+                  backgroundColor: colors.inputBg,
+                  padding: "0.6rem 0.9rem",
+                  borderRadius: "8px",
+                  fontSize: "0.85rem",
+                  color: colors.textPrimary,
+                  marginBottom: "1.2rem",
+                  borderLeft: `3px solid ${colors.gold}`
+                }}>
                   {quote}
                 </div>
 
-                {/* Interactive Inputs */}
-                <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: "1rem" }}>
+                {/* Goal Parameters Grid */}
+                <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(170px, 1fr))", gap: "1rem" }}>
                   <div>
-                    <label htmlFor={`target-${goal.id}`} style={{ fontSize: "0.75rem", color: "#8b949e" }}>Current Cost (₹)</label>
+                    <label htmlFor={`target-${goal.id}`} style={{ fontSize: "0.75rem", color: colors.textSecondary, fontWeight: 600 }}>
+                      Target Cost Today (₹)
+                    </label>
                     <input
                       id={`target-${goal.id}`}
                       type="number"
                       value={goal.targetPrice || ""}
                       onChange={(e) => updateGoal(goal.id, "targetPrice", Math.max(0, Number(e.target.value)))}
                       placeholder="0"
-                      style={{ width: "100%", backgroundColor: "#0d1117", border: "1px solid #30363d", color: "#f0f6fc", padding: "0.5rem", borderRadius: "6px", boxSizing: "border-box" }}
+                      style={{
+                        width: "100%",
+                        backgroundColor: colors.inputBg,
+                        border: "none",
+                        color: colors.textPrimary,
+                        padding: "0.55rem 0.75rem",
+                        borderRadius: "6px",
+                        fontWeight: 600,
+                        marginTop: "0.3rem",
+                        boxSizing: "border-box"
+                      }}
                     />
                   </div>
 
                   <div>
-                    <label htmlFor={`deposit-${goal.id}`} style={{ fontSize: "0.75rem", color: "#8b949e" }}>Opening Balance (₹)</label>
+                    <label htmlFor={`deposit-${goal.id}`} style={{ fontSize: "0.75rem", color: colors.textSecondary, fontWeight: 600 }}>
+                      Opening Base (₹)
+                    </label>
                     <input
                       id={`deposit-${goal.id}`}
                       type="number"
                       value={goal.initialDeposit || ""}
                       onChange={(e) => updateGoal(goal.id, "initialDeposit", Math.max(0, Number(e.target.value)))}
                       placeholder="0"
-                      style={{ width: "100%", backgroundColor: "#0d1117", border: "1px solid #30363d", color: "#f0f6fc", padding: "0.5rem", borderRadius: "6px", boxSizing: "border-box" }}
+                      style={{
+                        width: "100%",
+                        backgroundColor: colors.inputBg,
+                        border: "none",
+                        color: colors.textPrimary,
+                        padding: "0.55rem 0.75rem",
+                        borderRadius: "6px",
+                        fontWeight: 600,
+                        marginTop: "0.3rem",
+                        boxSizing: "border-box"
+                      }}
                     />
                   </div>
 
                   {goal.mode === "bySavings" ? (
                     <div>
-                      <label htmlFor={`alloc-${goal.id}`} style={{ fontSize: "0.75rem", color: "#8b949e" }}>Monthly Savings (₹)</label>
+                      <label htmlFor={`alloc-${goal.id}`} style={{ fontSize: "0.75rem", color: colors.textSecondary, fontWeight: 600 }}>
+                        Monthly Savings (₹)
+                      </label>
                       <input
                         id={`alloc-${goal.id}`}
                         type="number"
                         value={goal.monthlyAllocation || ""}
                         onChange={(e) => updateGoal(goal.id, "monthlyAllocation", Math.max(0, Number(e.target.value)))}
                         placeholder="0"
-                        style={{ width: "100%", backgroundColor: "#0d1117", border: "1px solid #30363d", color: "#3fb950", padding: "0.5rem", borderRadius: "6px", boxSizing: "border-box" }}
+                        style={{
+                          width: "100%",
+                          backgroundColor: colors.inputBg,
+                          border: "none",
+                          color: colors.accent,
+                          padding: "0.55rem 0.75rem",
+                          borderRadius: "6px",
+                          fontWeight: 700,
+                          marginTop: "0.3rem",
+                          boxSizing: "border-box"
+                        }}
                       />
                     </div>
                   ) : (
                     <div>
-                      <label htmlFor={`deadline-${goal.id}`} style={{ fontSize: "0.75rem", color: "#8b949e" }}>Target Deadline (Months)</label>
+                      <label htmlFor={`deadline-${goal.id}`} style={{ fontSize: "0.75rem", color: colors.textSecondary, fontWeight: 600 }}>
+                        Deadline (Months)
+                      </label>
                       <input
                         id={`deadline-${goal.id}`}
                         type="number"
                         value={goal.targetMonths || ""}
                         onChange={(e) => updateGoal(goal.id, "targetMonths", Math.max(1, Number(e.target.value)))}
                         placeholder="12"
-                        style={{ width: "100%", backgroundColor: "#0d1117", border: "1px solid #30363d", color: "#58a6ff", padding: "0.5rem", borderRadius: "6px", boxSizing: "border-box" }}
+                        style={{
+                          width: "100%",
+                          backgroundColor: colors.inputBg,
+                          border: "none",
+                          color: colors.blue,
+                          padding: "0.55rem 0.75rem",
+                          borderRadius: "6px",
+                          fontWeight: 700,
+                          marginTop: "0.3rem",
+                          boxSizing: "border-box"
+                        }}
                       />
                     </div>
                   )}
 
                   <div>
-                    <label htmlFor={`inflation-${goal.id}`} style={{ fontSize: "0.75rem", color: "#8b949e" }}>
-                      Annual Price Shift (%)
+                    <label htmlFor={`inflation-${goal.id}`} style={{ fontSize: "0.75rem", color: colors.textSecondary, fontWeight: 600 }}>
+                      Annual Drift (%)
                     </label>
                     <input
                       id={`inflation-${goal.id}`}
                       type="number"
                       value={goal.annualInflationRate}
                       onChange={(e) => updateGoal(goal.id, "annualInflationRate", Number(e.target.value))}
-                      style={{ width: "100%", backgroundColor: "#0d1117", border: "1px solid #30363d", color: "#f0f6fc", padding: "0.5rem", borderRadius: "6px", boxSizing: "border-box" }}
+                      style={{
+                        width: "100%",
+                        backgroundColor: colors.inputBg,
+                        border: "none",
+                        color: colors.textPrimary,
+                        padding: "0.55rem 0.75rem",
+                        borderRadius: "6px",
+                        fontWeight: 600,
+                        marginTop: "0.3rem",
+                        boxSizing: "border-box"
+                      }}
                     />
                   </div>
                 </div>
 
-                {/* Calculation Snapshot */}
-                <div style={{ marginTop: "1.2rem", paddingTop: "1rem", borderTop: "1px solid #21262d", display: "flex", justifyContent: "space-between", alignItems: "baseline", flexWrap: "wrap", gap: "0.5rem" }}>
+                {/* Results Snapshot */}
+                <div style={{
+                  marginTop: "1.4rem",
+                  paddingTop: "1rem",
+                  borderTop: `1px solid ${colors.border}`,
+                  display: "flex",
+                  justifyContent: "space-between",
+                  alignItems: "baseline",
+                  flexWrap: "wrap",
+                  gap: "0.5rem"
+                }}>
                   <div>
                     {goal.mode === "bySavings" ? (
                       <>
-                        <span style={{ fontSize: "0.8rem", color: "#8b949e" }}>Timeline: </span>
+                        <span style={{ fontSize: "0.8rem", color: colors.textSecondary }}>Timeline: </span>
                         {result.isUnreachable ? (
-                          <div style={{ color: "#f85149", fontSize: "0.85rem", marginTop: "0.2rem" }}>
-                            <strong>Allocation too low to beat inflation.</strong>
-                            <div style={{ color: "#8b949e", fontSize: "0.8rem", marginTop: "0.2rem" }}>
-                              Suggested: Save <strong>₹{result.minMonthlyFor5Years.toLocaleString()} / mo</strong> to finish in 5 years.
+                          <div style={{ color: colors.danger, fontSize: "0.85rem", marginTop: "0.2rem" }}>
+                            <strong>Allocation cannot outpace inflation.</strong>
+                            <div style={{ color: colors.textSecondary, fontSize: "0.8rem", marginTop: "0.2rem" }}>
+                              Suggested: Save <strong>₹{result.minMonthlyFor5Years.toLocaleString()} / mo</strong> to complete in 5 years.
                             </div>
                           </div>
                         ) : (
                           <>
-                            <strong style={{ fontSize: "1.2rem", color: "#58a6ff" }}>{result.realMonthsToGoal} months</strong>
-                            <span style={{ fontSize: "0.8rem", color: "#8b949e" }}> ({(result.realMonthsToGoal / 12).toFixed(1)} yrs)</span>
+                            <strong style={{ fontSize: "1.25rem", color: colors.accent, fontWeight: 800 }}>
+                              {result.realMonthsToGoal} months
+                            </strong>
+                            <span style={{ fontSize: "0.8rem", color: colors.textSecondary }}> ({(result.realMonthsToGoal / 12).toFixed(1)} yrs)</span>
                           </>
                         )}
                       </>
                     ) : (
                       <div>
-                        <span style={{ fontSize: "0.8rem", color: "#8b949e" }}>Required Monthly Savings: </span>
-                        <strong style={{ fontSize: "1.2rem", color: "#3fb950" }}>₹{result.requiredMonthlyForDeadline.toLocaleString()} / mo</strong>
-                        <span style={{ fontSize: "0.8rem", color: "#8b949e" }}> (to hit {goal.targetMonths} months)</span>
+                        <span style={{ fontSize: "0.8rem", color: colors.textSecondary }}>Required Monthly Allocation: </span>
+                        <strong style={{ fontSize: "1.25rem", color: colors.accent, fontWeight: 800 }}>
+                          ₹{result.requiredMonthlyForDeadline.toLocaleString()} / mo
+                        </strong>
                       </div>
                     )}
                   </div>
 
-                  <div style={{ fontSize: "0.8rem", color: "#8b949e" }}>
+                  <div style={{ fontSize: "0.8rem", color: colors.textSecondary }}>
                     Future estimated cost:{" "}
-                    <strong style={{ color: goal.annualInflationRate < 0 ? "#3fb950" : "#f85149" }}>
+                    <strong style={{ color: goal.annualInflationRate < 0 ? colors.accent : colors.danger }}>
                       ₹{result.realFuturePrice.toLocaleString()}
                     </strong>
                   </div>
@@ -614,19 +856,20 @@ export default function App() {
         </section>
 
         {/* Add Goal Button */}
-        <div style={{ textAlign: "center", marginBottom: "2.5rem" }}>
+        <div style={{ textAlign: "center", marginBottom: "3rem" }}>
           <button
             type="button"
             onClick={addGoal}
             style={{
               backgroundColor: "transparent",
-              border: "2px dashed #30363d",
-              color: "#58a6ff",
-              padding: "0.8rem 2rem",
-              borderRadius: "8px",
+              border: `2px dashed ${colors.border}`,
+              color: colors.accent,
+              padding: "0.8rem 2.2rem",
+              borderRadius: "500px",
               cursor: "pointer",
               fontSize: "0.95rem",
-              fontWeight: "bold"
+              fontWeight: 700,
+              letterSpacing: "0.02em"
             }}
           >
             + Add Another Goal
@@ -634,35 +877,64 @@ export default function App() {
         </div>
 
         {/* Expense Ledger */}
-        <section style={{ backgroundColor: "#161b22", border: "1px solid #30363d", borderRadius: "8px", padding: "1.2rem", marginBottom: "2rem" }}>
-          <h3 style={{ margin: "0 0 0.5rem", color: "#f0f6fc", fontSize: "1rem" }}>Monthly Living Expenses</h3>
-          <p style={{ fontSize: "0.8rem", color: "#8b949e", margin: "0 0 1rem" }}>
-            Track regular outgoings so savings targets reflect actual disposable income.
+        <section style={{
+          backgroundColor: colors.surface,
+          borderRadius: "14px",
+          padding: "1.4rem",
+          marginBottom: "2rem",
+          boxShadow: isDark ? "0 4px 16px rgba(0,0,0,0.4)" : "0 4px 14px rgba(0,0,0,0.06)"
+        }}>
+          <h2 style={{ fontSize: "1.1rem", fontWeight: 700, margin: "0 0 0.3rem" }}>Monthly Living Expenses</h2>
+          <p style={{ fontSize: "0.8rem", color: colors.textSecondary, margin: "0 0 1rem" }}>
+            Track recurring bills so savings targets stay within actual cashflow limits.
           </p>
 
-          <div style={{ display: "flex", gap: "0.5rem", marginBottom: "1rem", flexWrap: "wrap" }}>
-            <label htmlFor="expenseCategoryInput" style={{ display: "none" }}>Category</label>
+          <div style={{ display: "flex", gap: "0.6rem", marginBottom: "1rem", flexWrap: "wrap" }}>
             <input
-              id="expenseCategoryInput"
               type="text"
-              placeholder="Category (e.g. Rent, Groceries)"
+              placeholder="Expense Category (e.g. Rent, EMI)"
               value={expenseCategory}
               onChange={(e) => setExpenseCategory(e.target.value)}
-              style={{ flex: 2, minWidth: "160px", backgroundColor: "#0d1117", border: "1px solid #30363d", color: "#f0f6fc", padding: "0.5rem", borderRadius: "4px" }}
+              style={{
+                flex: 2,
+                minWidth: "160px",
+                backgroundColor: colors.inputBg,
+                border: "none",
+                color: colors.textPrimary,
+                padding: "0.6rem 0.9rem",
+                borderRadius: "8px",
+                fontWeight: 600
+              }}
             />
-            <label htmlFor="expenseAmountInput" style={{ display: "none" }}>Amount</label>
             <input
-              id="expenseAmountInput"
               type="number"
               placeholder="Amount (₹)"
               value={expenseAmount}
               onChange={(e) => setExpenseAmount(e.target.value)}
-              style={{ flex: 1, minWidth: "120px", backgroundColor: "#0d1117", border: "1px solid #30363d", color: "#f0f6fc", padding: "0.5rem", borderRadius: "4px" }}
+              style={{
+                flex: 1,
+                minWidth: "120px",
+                backgroundColor: colors.inputBg,
+                border: "none",
+                color: colors.textPrimary,
+                padding: "0.6rem 0.9rem",
+                borderRadius: "8px",
+                fontWeight: 600
+              }}
             />
             <button
               type="button"
               onClick={addExpense}
-              style={{ backgroundColor: "#238636", color: "#fff", border: "none", padding: "0.5rem 1rem", borderRadius: "4px", cursor: "pointer", fontWeight: "bold" }}
+              style={{
+                backgroundColor: colors.accent,
+                color: "#000000",
+                border: "none",
+                padding: "0.6rem 1.4rem",
+                borderRadius: "500px",
+                cursor: "pointer",
+                fontWeight: 800,
+                fontSize: "0.85rem"
+              }}
             >
               Add Expense
             </button>
@@ -670,26 +942,57 @@ export default function App() {
 
           <div style={{ display: "flex", flexDirection: "column", gap: "0.4rem" }}>
             {expenses.map((e) => (
-              <div key={e.id} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "0.5rem 0.8rem", backgroundColor: "#0d1117", borderRadius: "4px", border: "1px solid #21262d" }}>
+              <div
+                key={e.id}
+                style={{
+                  display: "flex",
+                  justifyContent: "space-between",
+                  alignItems: "center",
+                  padding: "0.6rem 0.9rem",
+                  backgroundColor: colors.inputBg,
+                  borderRadius: "8px",
+                  fontSize: "0.85rem",
+                  fontWeight: 600
+                }}
+              >
                 <span>{e.category}</span>
                 <div style={{ display: "flex", gap: "1rem", alignItems: "center" }}>
-                  <span style={{ color: "#f0f6fc" }}>₹{e.amount.toLocaleString()}</span>
-                  <button type="button" onClick={() => removeExpense(e.id)} style={{ background: "none", border: "none", color: "#f85149", cursor: "pointer" }}>✕</button>
+                  <span>₹{e.amount.toLocaleString()}</span>
+                  <button
+                    type="button"
+                    onClick={() => removeExpense(e.id)}
+                    style={{ background: "none", border: "none", color: colors.danger, cursor: "pointer" }}
+                  >
+                    ✕
+                  </button>
                 </div>
               </div>
             ))}
           </div>
         </section>
 
-        {/* Transaction History Audit Log */}
-        <section style={{ backgroundColor: "#161b22", border: "1px solid #30363d", borderRadius: "8px", padding: "1.2rem", marginBottom: "2rem" }}>
+        {/* Transaction History Activity Log */}
+        <section style={{
+          backgroundColor: colors.surface,
+          borderRadius: "14px",
+          padding: "1.4rem",
+          marginBottom: "2.5rem",
+          boxShadow: isDark ? "0 4px 16px rgba(0,0,0,0.4)" : "0 4px 14px rgba(0,0,0,0.06)"
+        }}>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "1rem" }}>
-            <h3 style={{ margin: 0, color: "#f0f6fc", fontSize: "1rem" }}>Savings Activity Log</h3>
+            <h2 style={{ fontSize: "1.1rem", fontWeight: 700, margin: 0 }}>Savings Activity Log</h2>
             {transactions.length > 0 && (
               <button
                 type="button"
                 onClick={clearHistory}
-                style={{ background: "none", border: "none", color: "#8b949e", cursor: "pointer", fontSize: "0.75rem" }}
+                style={{
+                  background: "none",
+                  border: "none",
+                  color: colors.textSecondary,
+                  cursor: "pointer",
+                  fontSize: "0.75rem",
+                  fontWeight: 600
+                }}
               >
                 Clear History
               </button>
@@ -697,7 +1000,7 @@ export default function App() {
           </div>
 
           {transactions.length === 0 ? (
-            <div style={{ color: "#6e7681", fontSize: "0.85rem", fontStyle: "italic" }}>
+            <div style={{ color: colors.textSecondary, fontSize: "0.85rem", fontStyle: "italic" }}>
               No deposits or withdrawals recorded yet.
             </div>
           ) : (
@@ -709,16 +1012,15 @@ export default function App() {
                     display: "flex",
                     justifyContent: "space-between",
                     alignItems: "center",
-                    backgroundColor: "#0d1117",
-                    padding: "0.6rem 0.8rem",
-                    borderRadius: "6px",
-                    border: "1px solid #21262d",
+                    backgroundColor: colors.inputBg,
+                    padding: "0.65rem 0.9rem",
+                    borderRadius: "8px",
                     fontSize: "0.85rem"
                   }}
                 >
                   <div style={{ display: "flex", flexDirection: "column" }}>
-                    <span style={{ color: "#f0f6fc", fontWeight: "bold" }}>{tx.goalTitle}</span>
-                    <span style={{ color: "#6e7681", fontSize: "0.75rem" }}>
+                    <span style={{ fontWeight: 700 }}>{tx.goalTitle}</span>
+                    <span style={{ color: colors.textSecondary, fontSize: "0.75rem" }}>
                       {new Date(tx.isoTimestamp).toLocaleString(undefined, {
                         dateStyle: "medium",
                         timeStyle: "short",
@@ -727,8 +1029,8 @@ export default function App() {
                   </div>
 
                   <span style={{
-                    color: tx.type === "deposit" ? "#3fb950" : "#f85149",
-                    fontWeight: "bold",
+                    color: tx.type === "deposit" ? colors.accent : colors.danger,
+                    fontWeight: 800,
                     fontSize: "0.95rem"
                   }}>
                     {tx.type === "deposit" ? "+" : "−"}₹{tx.amount.toLocaleString()}
@@ -739,13 +1041,20 @@ export default function App() {
           )}
         </section>
 
-        {/* Footer Disclaimers & Storage Notes */}
-        <footer style={{ borderTop: "1px solid #30363d", paddingTop: "1.2rem", textAlign: "center", fontSize: "0.8rem", color: "#8b949e", lineHeight: 1.6 }}>
-          <p style={{ margin: "0 0 0.4rem" }}>
-            <strong>Local Storage Notice:</strong> All plans and transactions are saved entirely inside this browser. No personal data is transmitted to an external server. Export a JSON backup periodically to protect your records.
+        {/* Footer */}
+        <footer style={{
+          borderTop: `1px solid ${colors.border}`,
+          paddingTop: "1.2rem",
+          textAlign: "center",
+          fontSize: "0.75rem",
+          color: colors.textSecondary,
+          lineHeight: 1.6
+        }}>
+          <p style={{ margin: "0 0 0.3rem" }}>
+            <strong>Local Storage:</strong> All plans and logs are stored privately inside your browser. Export JSON backups regularly to keep your milestones secure.
           </p>
           <p style={{ margin: 0, fontStyle: "italic" }}>
-            <strong>Disclaimer:</strong> Mathematical projections assume continuous compounding rates. These models are educational estimators and do not constitute financial advice.
+            Educational tool only; calculations do not constitute professional financial advice.
           </p>
         </footer>
 
