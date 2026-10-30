@@ -1,18 +1,14 @@
+export type GoalMode = "bySavings" | "byDeadline";
+
 export interface SavingsGoalItem {
   id: string;
   title: string;
   targetPrice: number;
-  currentSaved: number;
-  monthlyAllocation: number;
-  annualInflationRate: number;
-}
-
-export interface GoalCalculationResult {
-  realMonthsToGoal: number;
-  realFuturePrice: number;
-  todayRemainingAmount: number;
-  progressPercentage: number;
-  isUnreachable: boolean;
+  initialDeposit: number;
+  mode: GoalMode;
+  monthlyAllocation: number; // Used in "bySavings" mode
+  targetMonths: number;      // Used in "byDeadline" mode
+  annualInflationRate: number; // Supports negative for depreciation
 }
 
 export interface TransactionRecord {
@@ -21,5 +17,22 @@ export interface TransactionRecord {
   goalTitle: string;
   type: "deposit" | "withdraw";
   amount: number;
-  timestamp: string; // ISO String
+  isoTimestamp: string;
+}
+
+export interface ExpenseItem {
+  id: string;
+  category: string;
+  amount: number;
+}
+
+export interface GoalCalculationResult {
+  currentBalance: number;
+  todayRemaining: number;
+  progressPercentage: number;
+  realMonthsToGoal: number;
+  realFuturePrice: number;
+  requiredMonthlyForDeadline: number;
+  minMonthlyFor5Years: number;
+  isUnreachable: boolean;
 }
