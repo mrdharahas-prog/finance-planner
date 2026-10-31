@@ -6,15 +6,14 @@ export interface SavingsGoalItem {
   targetPrice: number;
   initialDeposit: number;
   mode: GoalMode;
-  monthlyAllocation: number; // Used in "bySavings" mode
-  targetMonths: number;      // Used in "byDeadline" mode
-  annualInflationRate: number; // Supports negative for depreciation
+  monthlyAllocation: number;
+  targetMonths: number;
+  annualInflationRate: number;
 }
 
 export interface TransactionRecord {
   id: string;
   goalId: string;
-  goalTitle: string;
   type: "deposit" | "withdraw";
   amount: number;
   isoTimestamp: string;

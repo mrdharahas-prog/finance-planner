@@ -1,13 +1,13 @@
 import { useState, useEffect, useRef } from "react";
 import { evaluateGoal, getMotivationalMessage, computeGoalBalance } from "./calculator";
-import { safeLoad, safeSave } from "./storage";
+import { safeLoad, safeSave, isValidGoal, isValidTransaction, isValidExpense } from "./storage";
 import type { SavingsGoalItem, TransactionRecord, ExpenseItem } from "./types";
 
-const STORAGE_GOALS = "fp_goals_v3";
-const STORAGE_LOGS = "fp_logs_v3";
-const STORAGE_EXPENSES = "fp_expenses_v3";
-const STORAGE_SALARY = "fp_salary_v3";
-const STORAGE_THEME = "fp_theme_v1";
+const STORAGE_GOALS = "fp_goals_v4";
+const STORAGE_LOGS = "fp_logs_v4";
+const STORAGE_EXPENSES = "fp_expenses_v4";
+const STORAGE_SALARY = "fp_salary_v4";
+const STORAGE_THEME = "fp_theme_v2";
 
 const DEFAULT_GOALS: SavingsGoalItem[] = [
   {
@@ -43,19 +43,31 @@ export default function App() {
   );
 
   const [monthlySalary, setMonthlySalary] = useState<number>(() =>
-    safeLoad(STORAGE_SALARY, 50000, (d) => typeof d === "number")
+    safeLoad(STORAGE_SALARY, 50000, (d) => typeof d === "number" && !isNaN(d))
   );
 
   const [goals, setGoals] = useState<SavingsGoalItem[]>(() =>
-    safeLoad(STORAGE_GOALS, DEFAULT_GOALS, (d) => Array.isArray(d))
+    safeLoad(
+      STORAGE_GOALS,
+      DEFAULT_GOALS,
+      (d) => Array.isArray(d) && d.length > 0 && d.every(isValidGoal)
+    )
   );
 
   const [transactions, setTransactions] = useState<TransactionRecord[]>(() =>
-    safeLoad(STORAGE_LOGS, [], (d) => Array.isArray(d))
+    safeLoad(
+      STORAGE_LOGS,
+      [],
+      (d) => Array.isArray(d) && d.every(isValidTransaction)
+    )
   );
 
   const [expenses, setExpenses] = useState<ExpenseItem[]>(() =>
-    safeLoad(STORAGE_EXPENSES, DEFAULT_EXPENSES, (d) => Array.isArray(d))
+    safeLoad(
+      STORAGE_EXPENSES,
+      DEFAULT_EXPENSES,
+      (d) => Array.isArray(d) && d.every(isValidExpense)
+    )
   );
 
   const [txGoalId, setTxGoalId] = useState<string>(() => goals[0]?.id || "");
@@ -107,8 +119,9 @@ export default function App() {
     gold: "#d97706",
   };
 
+  // True disposable balance (shows actual negative numbers without clamping)
   const totalExpenses = expenses.reduce((sum, e) => sum + e.amount, 0);
-  const disposableIncome = Math.max(0, monthlySalary - totalExpenses);
+  const disposableIncome = monthlySalary - totalExpenses;
 
   const totalMonthlyCommitted = goals.reduce((sum, g) => {
     const balance = computeGoalBalance(g, transactions);
@@ -169,7 +182,6 @@ export default function App() {
     const record: TransactionRecord = {
       id: `tx-${Date.now()}`,
       goalId: target.id,
-      goalTitle: target.title,
       type: txType,
       amount: amt,
       isoTimestamp: new Date().toISOString(),
@@ -211,7 +223,7 @@ export default function App() {
 
   const exportBackupJSON = () => {
     const backupData = {
-      version: 3,
+      version: 4,
       salary: monthlySalary,
       goals,
       transactions,
@@ -235,14 +247,24 @@ export default function App() {
     reader.onload = (event) => {
       try {
         const data = JSON.parse(event.target?.result as string);
-        if (Array.isArray(data.goals) && Array.isArray(data.transactions)) {
+        if (
+          data &&
+          typeof data === "object" &&
+          Array.isArray(data.goals) &&
+          data.goals.length > 0 &&
+          data.goals.every(isValidGoal) &&
+          Array.isArray(data.transactions) &&
+          data.transactions.every(isValidTransaction)
+        ) {
           setMonthlySalary(Number(data.salary) || 50000);
           setGoals(data.goals);
           setTransactions(data.transactions);
-          if (Array.isArray(data.expenses)) setExpenses(data.expenses);
-          notify("Data restored successfully.");
+          if (Array.isArray(data.expenses) && data.expenses.every(isValidExpense)) {
+            setExpenses(data.expenses);
+          }
+          notify("Data verified and restored successfully.");
         } else {
-          notify("Invalid backup format.", true);
+          notify("Invalid backup format or damaged data.", true);
         }
       } catch {
         notify("Failed to parse backup JSON file.", true);
@@ -261,8 +283,8 @@ export default function App() {
       padding: "2.5rem 1rem",
       display: "flex",
       justifyContent: "center",
-      transition: "background-color 0.3s, color 0.3s",
-      }}>
+      transition: "background-color 0.25s ease, color 0.25s ease"
+    }}>
       <div style={{ maxWidth: "880px", width: "100%" }}>
         
         {/* Top App Bar */}
@@ -271,20 +293,16 @@ export default function App() {
             <div>
               <div style={{ display: "flex", alignItems: "center", gap: "0.6rem" }}>
                 <span style={{ fontSize: "1.8rem" }}>💸</span>
-                {/* Finance Planner title -> Manrope 800 */}
                 <h1 style={{ fontFamily: "'Manrope', sans-serif", fontSize: "1.75rem", fontWeight: 800, margin: 0, letterSpacing: "-0.03em" }}>
                   Finance Planner
                 </h1>
               </div>
-              {/* Descriptions and helper text -> Inter 400 */}
               <p style={{ fontFamily: "'Inter', sans-serif", color: colors.textSecondary, fontSize: "0.9rem", fontWeight: 400, margin: "0.3rem 0 0" }}>
                 Multi-goal tracking with true compounding and disposable budget checks.
               </p>
             </div>
 
-            {/* Actions & Theme Switch */}
             <div style={{ display: "flex", alignItems: "center", gap: "0.6rem" }}>
-              {/* Buttons and form labels -> Inter 600 */}
               <button
                 type="button"
                 onClick={() => setTheme(isDark ? "light" : "dark")}
@@ -359,12 +377,10 @@ export default function App() {
               borderRadius: "10px",
               boxShadow: isDark ? "0 4px 12px rgba(0,0,0,0.5)" : "0 4px 12px rgba(0,0,0,0.06)"
             }}>
-              {/* Form labels -> Inter 600 */}
               <label htmlFor="salaryInput" style={{ fontFamily: "'Inter', sans-serif", fontSize: "0.8rem", color: colors.textSecondary, textTransform: "uppercase", letterSpacing: "0.05em", fontWeight: 600 }}>
                 Monthly Salary
               </label>
               <div style={{ display: "flex", alignItems: "center", gap: "0.4rem", marginTop: "0.4rem" }}>
-                {/* Salary and currency figures -> Inter 700 */}
                 <span style={{ fontFamily: "'Inter', sans-serif", fontSize: "1.2rem", fontWeight: 700, color: colors.accent }}>₹</span>
                 <input
                   id="salaryInput"
@@ -392,17 +408,17 @@ export default function App() {
               borderRadius: "10px",
               boxShadow: isDark ? "0 4px 12px rgba(0,0,0,0.5)" : "0 4px 12px rgba(0,0,0,0.06)"
             }}>
-              {/* Card headings -> Manrope 700 */}
               <div style={{ fontFamily: "'Manrope', sans-serif", fontSize: "0.85rem", color: colors.textSecondary, textTransform: "uppercase", letterSpacing: "0.05em", fontWeight: 700 }}>
                 Living Expenses
               </div>
-              {/* Currency figures -> Inter 700 */}
               <div style={{ fontFamily: "'Inter', sans-serif", fontSize: "1.4rem", fontWeight: 700, marginTop: "0.4rem" }}>
                 ₹{totalExpenses.toLocaleString()} <span style={{ fontSize: "0.8rem", color: colors.textSecondary, fontWeight: 400 }}>/ mo</span>
               </div>
-              {/* Helper text -> Inter 400 */}
               <div style={{ fontFamily: "'Inter', sans-serif", fontSize: "0.75rem", fontWeight: 400, color: colors.textSecondary, marginTop: "0.2rem" }}>
-                Disposable: <strong style={{ color: colors.textPrimary, fontWeight: 700 }}>₹{disposableIncome.toLocaleString()}</strong>
+                Disposable:{" "}
+                <strong style={{ color: disposableIncome < 0 ? colors.danger : colors.textPrimary, fontWeight: 700 }}>
+                  {disposableIncome < 0 ? `-₹${Math.abs(disposableIncome).toLocaleString()}` : `₹${disposableIncome.toLocaleString()}`}
+                </strong>
               </div>
             </div>
 
@@ -412,17 +428,16 @@ export default function App() {
               borderRadius: "10px",
               boxShadow: isDark ? "0 4px 12px rgba(0,0,0,0.5)" : "0 4px 12px rgba(0,0,0,0.06)"
             }}>
-              {/* Card headings -> Manrope 700 */}
               <div style={{ fontFamily: "'Manrope', sans-serif", fontSize: "0.85rem", color: colors.textSecondary, textTransform: "uppercase", letterSpacing: "0.05em", fontWeight: 700 }}>
                 Committed to Goals
               </div>
-              {/* Currency figures -> Inter 700 */}
               <div style={{ fontFamily: "'Inter', sans-serif", fontSize: "1.4rem", fontWeight: 700, color: remainingAfterCommitments < 0 ? colors.danger : colors.accent, marginTop: "0.4rem" }}>
                 ₹{totalMonthlyCommitted.toLocaleString()} <span style={{ fontSize: "0.8rem", color: colors.textSecondary, fontWeight: 400 }}>/ mo</span>
               </div>
-              {/* Helper text -> Inter 400 */}
               <div style={{ fontFamily: "'Inter', sans-serif", fontSize: "0.75rem", fontWeight: 400, color: remainingAfterCommitments < 0 ? colors.danger : colors.textSecondary, marginTop: "0.2rem" }}>
-                {remainingAfterCommitments < 0 ? "⚠ Exceeds disposable balance!" : `₹${remainingAfterCommitments.toLocaleString()} buffer unallocated`}
+                {remainingAfterCommitments < 0
+                  ? `⚠ Deficit: -₹${Math.abs(remainingAfterCommitments).toLocaleString()} vs disposable`
+                  : `₹${remainingAfterCommitments.toLocaleString()} buffer unallocated`}
               </div>
             </div>
           </div>
@@ -438,13 +453,10 @@ export default function App() {
         }}>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "1rem", flexWrap: "wrap", gap: "0.8rem" }}>
             <div>
-              {/* Card headings -> Manrope 700 */}
               <h2 style={{ fontFamily: "'Manrope', sans-serif", fontSize: "1.1rem", fontWeight: 700, margin: 0 }}>Piggy Bank Transactions</h2>
-              {/* Helper text -> Inter 400 */}
               <p style={{ fontFamily: "'Inter', sans-serif", fontSize: "0.8rem", fontWeight: 400, color: colors.textSecondary, margin: "0.2rem 0 0" }}>Update your tangible savings progress.</p>
             </div>
 
-            {/* Pill Toggle Button: Buttons -> Inter 600 */}
             <div style={{ display: "flex", backgroundColor: colors.inputBg, padding: "3px", borderRadius: "500px" }}>
               <button
                 type="button"
@@ -529,7 +541,6 @@ export default function App() {
               }}
             />
 
-            {/* Buttons -> Inter 600 */}
             <button
               type="button"
               onClick={handleTransaction}
@@ -587,7 +598,6 @@ export default function App() {
               >
                 {/* Header row */}
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "1rem", flexWrap: "wrap", gap: "0.5rem" }}>
-                  {/* Goal names -> Manrope 700 */}
                   <input
                     aria-label="Goal Title"
                     type="text"
@@ -605,10 +615,8 @@ export default function App() {
                     }}
                   />
 
-                  {/* Mode Pill Switch & Delete */}
                   <div style={{ display: "flex", gap: "0.6rem", alignItems: "center" }}>
                     <div style={{ display: "flex", backgroundColor: colors.inputBg, padding: "2px", borderRadius: "500px" }}>
-                      {/* Buttons -> Inter 600 */}
                       <button
                         type="button"
                         onClick={() => updateGoal(goal.id, "mode", "bySavings")}
@@ -671,9 +679,8 @@ export default function App() {
                     <span style={{ fontFamily: "'Inter', sans-serif", color: colors.textSecondary, fontWeight: 400 }}>
                       Progress ({result.progressPercentage}%)
                     </span>
-                    {/* Progress figures -> Inter 700 */}
-                    <span style={{ fontFamily: "'Inter', sans-serif", color: colors.accent, fontWeight: 700 }}>
-                      ₹{currentBalance.toLocaleString()} / ₹{goal.targetPrice.toLocaleString()}
+                    <span style={{ fontFamily: "'Inter', sans-serif", color: currentBalance < 0 ? colors.danger : colors.accent, fontWeight: 700 }}>
+                      {currentBalance < 0 ? `-₹${Math.abs(currentBalance).toLocaleString()}` : `₹${currentBalance.toLocaleString()}`} / ₹{goal.targetPrice.toLocaleString()}
                     </span>
                   </div>
                   <div style={{
@@ -684,16 +691,30 @@ export default function App() {
                     overflow: "hidden"
                   }}>
                     <div style={{
-                      width: `${result.progressPercentage}%`,
+                      width: `${Math.max(0, result.progressPercentage)}%`,
                       height: "100%",
-                      backgroundColor: colors.accent,
+                      backgroundColor: currentBalance < 0 ? colors.danger : colors.accent,
                       borderRadius: "500px",
                       transition: "width 0.4s ease"
                     }} />
                   </div>
                 </div>
 
-                {/* Motivational Helper text -> Inter 400 */}
+                {currentBalance < 0 && (
+                  <div style={{
+                    backgroundColor: "rgba(241, 94, 108, 0.15)",
+                    border: `1px solid ${colors.danger}`,
+                    color: colors.danger,
+                    padding: "0.5rem 0.8rem",
+                    borderRadius: "6px",
+                    fontSize: "0.8rem",
+                    fontWeight: 600,
+                    marginBottom: "1rem"
+                  }}>
+                    ⚠ Warning: Recorded withdrawals exceed opening base + deposits by ₹{Math.abs(currentBalance).toLocaleString()}.
+                  </div>
+                )}
+
                 <div style={{
                   backgroundColor: colors.inputBg,
                   padding: "0.6rem 0.9rem",
@@ -711,11 +732,9 @@ export default function App() {
                 {/* Goal Parameters Grid */}
                 <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(170px, 1fr))", gap: "1rem" }}>
                   <div>
-                    {/* Form labels -> Inter 600 */}
                     <label htmlFor={`target-${goal.id}`} style={{ fontFamily: "'Inter', sans-serif", fontSize: "0.75rem", color: colors.textSecondary, fontWeight: 600 }}>
                       Target Cost Today (₹)
                     </label>
-                    {/* Currency figures -> Inter 700 */}
                     <input
                       id={`target-${goal.id}`}
                       type="number"
@@ -739,11 +758,9 @@ export default function App() {
                   </div>
 
                   <div>
-                    {/* Form labels -> Inter 600 */}
                     <label htmlFor={`deposit-${goal.id}`} style={{ fontFamily: "'Inter', sans-serif", fontSize: "0.75rem", color: colors.textSecondary, fontWeight: 600 }}>
                       Opening Base (₹)
                     </label>
-                    {/* Currency figures -> Inter 700 */}
                     <input
                       id={`deposit-${goal.id}`}
                       type="number"
@@ -768,11 +785,9 @@ export default function App() {
 
                   {goal.mode === "bySavings" ? (
                     <div>
-                      {/* Form labels -> Inter 600 */}
                       <label htmlFor={`alloc-${goal.id}`} style={{ fontFamily: "'Inter', sans-serif", fontSize: "0.75rem", color: colors.textSecondary, fontWeight: 600 }}>
                         Monthly Savings (₹)
                       </label>
-                      {/* Currency figures -> Inter 700 */}
                       <input
                         id={`alloc-${goal.id}`}
                         type="number"
@@ -796,16 +811,19 @@ export default function App() {
                     </div>
                   ) : (
                     <div>
-                      {/* Form labels -> Inter 600 */}
                       <label htmlFor={`deadline-${goal.id}`} style={{ fontFamily: "'Inter', sans-serif", fontSize: "0.75rem", color: colors.textSecondary, fontWeight: 600 }}>
-                        Deadline (Months)
+                        Deadline (Whole Months)
                       </label>
-                      {/* Timeline figures -> Inter 700 */}
                       <input
                         id={`deadline-${goal.id}`}
                         type="number"
+                        step="1"
+                        min="1"
                         value={goal.targetMonths || ""}
-                        onChange={(e) => updateGoal(goal.id, "targetMonths", Math.max(1, Number(e.target.value)))}
+                        onChange={(e) => {
+                          const val = Math.max(1, Math.round(Number(e.target.value) || 1));
+                          updateGoal(goal.id, "targetMonths", val);
+                        }}
                         placeholder="12"
                         style={{
                           width: "100%",
@@ -825,7 +843,6 @@ export default function App() {
                   )}
 
                   <div>
-                    {/* Form labels -> Inter 600 */}
                     <label htmlFor={`inflation-${goal.id}`} style={{ fontFamily: "'Inter', sans-serif", fontSize: "0.75rem", color: colors.textSecondary, fontWeight: 600 }}>
                       Annual Drift (%)
                     </label>
@@ -1060,39 +1077,45 @@ export default function App() {
             </div>
           ) : (
             <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem", maxHeight: "240px", overflowY: "auto" }}>
-              {transactions.map((tx) => (
-                <div
-                  key={tx.id}
-                  style={{
-                    display: "flex",
-                    justifyContent: "space-between",
-                    alignItems: "center",
-                    backgroundColor: colors.inputBg,
-                    padding: "0.65rem 0.9rem",
-                    borderRadius: "8px",
-                    fontSize: "0.85rem"
-                  }}
-                >
-                  <div style={{ display: "flex", flexDirection: "column" }}>
-                    <span style={{ fontFamily: "'Inter', sans-serif", fontWeight: 600 }}>{tx.goalTitle}</span>
-                    <span style={{ fontFamily: "'Inter', sans-serif", color: colors.textSecondary, fontSize: "0.75rem", fontWeight: 400 }}>
-                      {new Date(tx.isoTimestamp).toLocaleString(undefined, {
-                        dateStyle: "medium",
-                        timeStyle: "short",
-                      })}
+              {transactions.map((tx) => {
+                // Dynamically look up current goal name to prevent stale titles
+                const matchedGoal = goals.find((g) => g.id === tx.goalId);
+                const displayTitle = matchedGoal ? matchedGoal.title : "Archived Goal";
+
+                return (
+                  <div
+                    key={tx.id}
+                    style={{
+                      display: "flex",
+                      justifyContent: "space-between",
+                      alignItems: "center",
+                      backgroundColor: colors.inputBg,
+                      padding: "0.65rem 0.9rem",
+                      borderRadius: "8px",
+                      fontSize: "0.85rem"
+                    }}
+                  >
+                    <div style={{ display: "flex", flexDirection: "column" }}>
+                      <span style={{ fontFamily: "'Inter', sans-serif", fontWeight: 600 }}>{displayTitle}</span>
+                      <span style={{ fontFamily: "'Inter', sans-serif", color: colors.textSecondary, fontSize: "0.75rem", fontWeight: 400 }}>
+                        {new Date(tx.isoTimestamp).toLocaleString(undefined, {
+                          dateStyle: "medium",
+                          timeStyle: "short",
+                        })}
+                      </span>
+                    </div>
+
+                    <span style={{
+                      fontFamily: "'Inter', sans-serif",
+                      color: tx.type === "deposit" ? colors.accent : colors.danger,
+                      fontWeight: 700,
+                      fontSize: "0.95rem"
+                    }}>
+                      {tx.type === "deposit" ? "+" : "−"}₹{tx.amount.toLocaleString()}
                     </span>
                   </div>
-
-                  <span style={{
-                    fontFamily: "'Inter', sans-serif",
-                    color: tx.type === "deposit" ? colors.accent : colors.danger,
-                    fontWeight: 700,
-                    fontSize: "0.95rem"
-                  }}>
-                    {tx.type === "deposit" ? "+" : "−"}₹{tx.amount.toLocaleString()}
-                  </span>
-                </div>
-              ))}
+                );
+              })}
             </div>
           )}
         </section>
@@ -1112,7 +1135,7 @@ export default function App() {
             <strong>Local Storage:</strong> All plans and logs are stored privately inside your browser. Export JSON backups regularly to keep your milestones secure.
           </p>
           <p style={{ margin: 0, fontStyle: "italic" }}>
-            Educational tool only; calculations do not constitute professional financial advice.
+            Estimates only, not financial advice. Mathematical models assume continuous geometric compounding.
           </p>
         </footer>
 

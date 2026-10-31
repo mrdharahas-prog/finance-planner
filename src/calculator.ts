@@ -1,17 +1,10 @@
 import type { SavingsGoalItem, GoalCalculationResult, TransactionRecord } from "./types";
 
-/**
- * Geometric monthly compounding rate.
- * Supports depreciation down to -99.99%.
- */
 export function getGeometricMonthlyRate(annualRatePercentage: number): number {
   if (annualRatePercentage <= -100) return -1;
   return Math.pow(1 + annualRatePercentage / 100, 1 / 12) - 1;
 }
 
-/**
- * Computes single source of truth balance from initial opening deposit and audit transactions.
- */
 export function computeGoalBalance(
   goal: SavingsGoalItem,
   transactions: TransactionRecord[]
@@ -20,24 +13,20 @@ export function computeGoalBalance(
   const netActivity = goalTransactions.reduce((acc, t) => {
     return t.type === "deposit" ? acc + t.amount : acc - t.amount;
   }, 0);
-  return Math.max(0, (Number(goal.initialDeposit) || 0) + netActivity);
+  return (Number(goal.initialDeposit) || 0) + netActivity;
 }
 
-/**
- * Required monthly deposit to reach inflated target within M months:
- * M_needed = ceil((P0 * (1 + i)^M - CurrentSaved) / M)
- */
 export function calculateRequiredMonthlySavings(
   targetPrice: number,
   currentSaved: number,
   targetMonths: number,
   annualInflationRate: number
 ): number {
-  if (targetMonths <= 0) return 0;
+  const cleanMonths = Math.max(1, Math.round(targetMonths));
   const monthlyRate = getGeometricMonthlyRate(annualInflationRate);
-  const futurePrice = targetPrice * Math.pow(1 + monthlyRate, targetMonths);
+  const futurePrice = targetPrice * Math.pow(1 + monthlyRate, cleanMonths);
   const deficit = Math.max(0, futurePrice - currentSaved);
-  return Math.ceil(deficit / targetMonths);
+  return Math.ceil(deficit / cleanMonths);
 }
 
 export function evaluateGoal(
@@ -46,7 +35,7 @@ export function evaluateGoal(
 ): GoalCalculationResult {
   const targetPrice = Math.max(0, Number(goal.targetPrice) || 0);
   const monthlyAllocation = Math.max(0, Number(goal.monthlyAllocation) || 0);
-  const targetMonths = Math.max(1, Number(goal.targetMonths) || 1);
+  const targetMonths = Math.max(1, Math.round(Number(goal.targetMonths) || 1));
   const inflationRate = Number(goal.annualInflationRate) || 0;
   const monthlyRate = getGeometricMonthlyRate(inflationRate);
 
@@ -55,7 +44,6 @@ export function evaluateGoal(
     ? Math.min(100, Math.round((currentBalance / targetPrice) * 100))
     : (currentBalance > 0 ? 100 : 0);
 
-  // Solves for "byDeadline" mode
   const requiredMonthlyForDeadline = calculateRequiredMonthlySavings(
     targetPrice,
     currentBalance,
@@ -63,7 +51,6 @@ export function evaluateGoal(
     inflationRate
   );
 
-  // 5-Year Actionable Baseline for unreachable goals
   const minMonthlyFor5Years = calculateRequiredMonthlySavings(
     targetPrice,
     currentBalance,
@@ -71,7 +58,6 @@ export function evaluateGoal(
     inflationRate
   );
 
-  // If already fully funded
   if (currentBalance >= targetPrice && targetPrice > 0) {
     return {
       currentBalance,
@@ -85,7 +71,6 @@ export function evaluateGoal(
     };
   }
 
-  // Handle Target Deadline Mode
   if (goal.mode === "byDeadline") {
     const futurePrice = Math.round(targetPrice * Math.pow(1 + monthlyRate, targetMonths));
     return {
@@ -100,7 +85,6 @@ export function evaluateGoal(
     };
   }
 
-  // Handle Monthly Allocation Pursuit Mode
   if (monthlyAllocation <= 0) {
     return {
       currentBalance,
@@ -117,7 +101,7 @@ export function evaluateGoal(
   let month = 0;
   let accumulated = currentBalance;
   let currentPrice = targetPrice;
-  const MAX_MONTHS = 600; // 50-year cap
+  const MAX_MONTHS = 600;
 
   while (accumulated < currentPrice && month < MAX_MONTHS) {
     month++;
